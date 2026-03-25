@@ -29,7 +29,7 @@ class MCPBridgeConfig(BaseModel):
 
 
 class ObservabilitySettings(BaseModel):
-    otel_endpoint: str = "http://otel-collector:4317"
+    otel_endpoint: str | None = "http://otel-collector:4317"
     otel_sample_rate: float = 1.0
     otel_export_protocol: Literal["grpc", "http"] = "grpc"
     prometheus_port: int = 9090
