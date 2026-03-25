@@ -1,0 +1,8 @@
+target-version = "py312"
+line-length = 100
+
+[lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "TCH"]
+
+[lint.isort]
+known-first-party = ["agentic_core"]
