@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import agentic_core_pb2 as agentic__core__pb2
+from agentic_core.adapters.primary.grpc.generated import agentic_core_pb2 as agentic__core__pb2
 
 GRPC_GENERATED_VERSION = '1.78.0'
 GRPC_VERSION = grpc.__version__
