@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-agentic-core
+  labels:
+    app: agentic-core
+spec:
+  type: ClusterIP
+  ports:
+    - name: websocket
+      port: {{ .Values.service.websocket.port }}
+      targetPort: websocket
+    - name: grpc
+      port: {{ .Values.service.grpc.port }}
+      targetPort: grpc
+    - name: metrics
+      port: {{ .Values.service.metrics.port }}
+      targetPort: metrics
+  selector:
+    app: agentic-core
