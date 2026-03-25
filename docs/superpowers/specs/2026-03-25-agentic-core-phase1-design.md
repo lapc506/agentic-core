@@ -1739,6 +1739,145 @@ Available context variables in the condition:
 
 Allowed operators: `>`, `<`, `>=`, `<=`, `==`, `!=`, `and`, `or`, `not`, `in`.
 
+### 10.4 LLM Model Cascading
+
+Startups choose the LLM at the **Runtime level** (global default). Personas and sub-agents can override it. If no custom config exists at a level, it inherits from its parent.
+
+```mermaid
+graph TB
+    RUNTIME["Runtime Default<br/><b>AgenticSettings.default_model</b><br/><i>e.g., claude-sonnet-4-6</i>"]
+    RUNTIME -->|"inherits if<br/>no override"| P1["Persona: support-agent<br/><i>inherits claude-sonnet-4-6</i>"]
+    RUNTIME -->|"overrides"| P2["Persona: analyst-agent<br/><b>model_config:</b><br/><i>claude-opus-4-6</i>"]
+    RUNTIME -->|"overrides"| P3["Persona: orchestrator<br/><b>model_config:</b><br/><i>gemini-2.5-pro</i>"]
+
+    P2 -->|"inherits"| S1["Sub-agent: data-fetcher<br/><i>inherits claude-opus-4-6</i>"]
+    P2 -->|"overrides"| S2["Sub-agent: summarizer<br/><b>model_config:</b><br/><i>claude-haiku-4-5</i><br/><i>(cheaper for summaries)</i>"]
+
+    P3 -->|"overrides"| S3["Sub-agent: researcher<br/><b>model_config:</b><br/><i>claude-opus-4-6</i>"]
+    P3 -->|"inherits"| S4["Sub-agent: spec-writer<br/><i>inherits gemini-2.5-pro</i>"]
+
+    style RUNTIME fill:#E74C3C,color:#fff
+    style P1 fill:#3498DB,color:#fff
+    style P2 fill:#2980B9,color:#fff
+    style P3 fill:#2980B9,color:#fff
+    style S1 fill:#7FB3D8,color:#fff
+    style S2 fill:#1ABC9C,color:#fff
+    style S3 fill:#1ABC9C,color:#fff
+    style S4 fill:#7FB3D8,color:#fff
+```
+
+#### Resolution Order
+
+```
+Sub-agent model_config  →  if None: Parent persona model_config  →  if None: Runtime default_model
+```
+
+#### ModelConfig Value Object
+
+```python
+class ModelConfig(BaseModel):
+    """LLM configuration. Used at all 3 cascade levels."""
+    provider: Literal["anthropic", "openai", "google", "azure", "ollama", "custom"] = "anthropic"
+    model: str = "claude-sonnet-4-6"
+    temperature: float = 0.3
+    max_tokens: int = 4096
+    top_p: float | None = None
+    api_key_env: str | None = None      # Env var name holding the API key (e.g., "ANTHROPIC_API_KEY")
+    base_url: str | None = None         # Custom endpoint (Ollama, Azure, proxy)
+    extra_params: dict[str, Any] = {}   # Provider-specific params (e.g., thinking budget)
+```
+
+#### Cascade Levels
+
+| Level | Where configured | Scope | Use case |
+|-------|-----------------|-------|----------|
+| **Runtime** | `AgenticSettings.default_model` (env vars or config) | All personas + sub-agents | Startup chooses their default LLM |
+| **Persona** | `model_config` in persona YAML | This persona + its sub-agents | Expensive model for critical persona, cheap for simple ones |
+| **Sub-agent** | `model_config` in `delegate_to` YAML block | This sub-agent only | Cheap model for summarization, expensive for reasoning |
+
+#### Persona YAML with Cascade
+
+```yaml
+# Runtime default: claude-sonnet-4-6 (set via AGENTIC_DEFAULT_MODEL__MODEL=claude-sonnet-4-6)
+
+# agents/support-agent.yaml — inherits runtime default
+name: support-agent
+role: "Customer support"
+graph_template: react
+# model_config: (omitted → inherits claude-sonnet-4-6 from runtime)
+
+# agents/analyst-agent.yaml — overrides with opus
+name: analyst-agent
+role: "Financial analysis"
+graph_template: plan-and-execute
+model_config:
+  provider: "anthropic"
+  model: "claude-opus-4-6"          # Override: needs deep reasoning
+  temperature: 0.1
+  max_tokens: 8192
+
+# agents/orchestrator.yaml — uses Google, sub-agents can override
+name: orchestrator
+role: "Master orchestrator"
+graph_template: supervisor
+model_config:
+  provider: "google"
+  model: "gemini-2.5-pro"           # Override: orchestrator uses Gemini
+  temperature: 0.2
+delegate_to:
+  - name: researcher
+    model_config:                    # Override at sub-agent level
+      provider: "anthropic"
+      model: "claude-opus-4-6"      # Researcher needs Anthropic's reasoning
+  - name: spec-writer               # No model_config → inherits gemini-2.5-pro
+  - name: code-generator
+    model_config:
+      provider: "anthropic"
+      model: "claude-sonnet-4-6"    # Code gen: balanced cost/quality
+```
+
+#### Resolution in Code
+
+```python
+class ModelResolver:
+    """Resolves the effective ModelConfig for any agent at any level."""
+
+    def __init__(self, runtime_default: ModelConfig):
+        self._runtime_default = runtime_default
+
+    def resolve(self, persona: Persona, subagent_name: str | None = None) -> ModelConfig:
+        """Cascade: sub-agent → persona → runtime default."""
+        if subagent_name:
+            subagent_config = persona.get_delegate_model_config(subagent_name)
+            if subagent_config is not None:
+                return subagent_config
+        if persona.model_config is not None:
+            return persona.model_config
+        return self._runtime_default
+```
+
+#### Multi-Provider API Key Management
+
+Each provider needs its own API key. Keys are configured via env vars, never in YAML:
+
+```bash
+# Runtime level (env vars)
+export AGENTIC_DEFAULT_MODEL__PROVIDER=anthropic
+export AGENTIC_DEFAULT_MODEL__MODEL=claude-sonnet-4-6
+export ANTHROPIC_API_KEY=sk-ant-...
+export GOOGLE_API_KEY=AIza...
+export OPENAI_API_KEY=sk-...
+```
+
+The `api_key_env` field in `ModelConfig` allows a persona to use a specific env var (useful when the same provider has multiple API keys for billing separation):
+
+```yaml
+model_config:
+  provider: "anthropic"
+  model: "claude-opus-4-6"
+  api_key_env: "ANTHROPIC_API_KEY_PREMIUM"  # Different billing account
+```
+
 ## 11. Configuration
 
 ```python
@@ -1758,6 +1897,7 @@ class AgenticSettings(BaseSettings):
     pii_redaction_enabled: bool = True
     personas_dir: str = "agents/"
     mcp: MCPBridgeConfig = MCPBridgeConfig()
+    default_model: ModelConfig = ModelConfig()    # Runtime-level default LLM
     model_config = SettingsConfigDict(env_prefix="AGENTIC_")
 
 class MCPServerEntry(BaseModel):
