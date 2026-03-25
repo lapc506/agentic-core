@@ -27,52 +27,180 @@ Based on Herberto Graca's Explicit Architecture, organizing code by domain bound
 
 ### 2.1 Layer Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    PRIMARY ADAPTERS (Driving)                    │
-│  ┌─────────────┐  ┌──────────────┐  ┌───────────────────────┐  │
-│  │ WebSocket    │  │ gRPC         │  │ CLI (future)          │  │
-│  │ Adapter      │  │ Adapter      │  │ Adapter               │  │
-│  └──────┬───────┘  └──────┬───────┘  └──────────┬────────────┘  │
-│         └─────────────────┼─────────────────────┘               │
-│                           │ calls Ports                         │
-├───────────────────────────▼─────────────────────────────────────┤
-│                    APPLICATION LAYER                             │
-│  Commands: HandleMessage, CreateSession, ResumeHITL,            │
-│            ExecuteRoadmap, OptimizeSkill                         │
-│  Queries:  GetSession, ListPersonas, GetSLOStatus               │
-│  Ports:    MemoryPort, SessionPort, EmbeddingPort,              │
-│            GraphStorePort, ToolPort, ObservabilityPort,          │
-│            AlertPort                                             │
-│  Middleware: Tracing, Auth, RateLimit, PII, Metrics              │
-│  Services: GSDSequencer, SuperpowersFlow, AutoResearchLoop       │
-├─────────────────────────────────────────────────────────────────┤
-│                    DOMAIN LAYER (pure, zero dependencies)       │
-│  Entities:      Session, Persona, Skill, Roadmap                │
-│  Value Objects: AgentMessage, Checkpoint, SLOTarget, EvalResult │
-│  Domain Events: MessageProcessed, SessionCreated,                │
-│                 SkillOptimized, SLOBreached,                     │
-│                 HumanEscalationRequested, ErrorBudgetExhausted   │
-│  Domain Svcs:   RoutingService, EscalationService, EvalScoring   │
-│  Enums:         SessionState, GraphTemplate, PersonaCapability   │
-├─────────────────────────────────────────────────────────────────┤
-│                    SECONDARY ADAPTERS (Driven)                  │
-│  Redis, PostgreSQL, pgvector, FalkorDB, Langfuse, OTel,         │
-│  MCP Bridge, LangGraph                                           │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph PRIMARY["PRIMARY ADAPTERS (Driving)"]
+        WS["WebSocket Adapter"]
+        GRPC["gRPC Adapter"]
+        CLI["CLI Adapter (future)"]
+    end
 
-Dependency Rule: ALL arrows point INWARD.
+    subgraph APP["APPLICATION LAYER"]
+        direction TB
+        CMD["Commands: HandleMessage, CreateSession,<br/>ResumeHITL, ExecuteRoadmap, OptimizeSkill"]
+        QRY["Queries: GetSession, ListPersonas, GetSLOStatus"]
+        PORTS["Ports: MemoryPort, SessionPort, EmbeddingPort,<br/>GraphStorePort, ToolPort, TracingPort,<br/>MetricsPort, CostTrackingPort, GraphOrchestrationPort, AlertPort"]
+        MW["Middleware: Tracing, Auth, RateLimit, PII, Metrics"]
+        SVC["Services: GSDSequencer, SuperpowersFlow, AutoResearchLoop"]
+    end
+
+    subgraph DOMAIN["DOMAIN LAYER (pure, zero dependencies)"]
+        ENT["Entities: Session, Persona, Skill, Roadmap"]
+        VO["Value Objects: AgentMessage, Checkpoint, SLOTarget, EvalResult"]
+        EVT["Domain Events: MessageProcessed, SessionCreated,<br/>SLOBreached, SkillOptimized, ToolDegraded,<br/>HumanEscalationRequested, ErrorBudgetExhausted"]
+        DSVC["Domain Services: RoutingService, EscalationService, EvalScoring"]
+    end
+
+    subgraph SECONDARY["SECONDARY ADAPTERS (Driven)"]
+        REDIS["Redis"]
+        PG["PostgreSQL"]
+        PGV["pgvector"]
+        FDB["FalkorDB"]
+        LFUSE["Langfuse"]
+        OTEL["OpenTelemetry"]
+        MCP["MCP Bridge"]
+        LG["LangGraph"]
+    end
+
+    WS & GRPC & CLI -->|"calls Ports"| APP
+    APP -->|"uses"| DOMAIN
+    APP -.->|"depends on Port interfaces<br/>(dependency inversion)"| SECONDARY
+
+    style PRIMARY fill:#4A90D9,color:#fff
+    style APP fill:#7B68EE,color:#fff
+    style DOMAIN fill:#2ECC71,color:#fff
+    style SECONDARY fill:#E67E22,color:#fff
 ```
 
-### 2.2 Key Principles
+> **Dependency Rule:** ALL arrows point INWARD. Secondary adapters depend on Port interfaces defined in the Application layer, never the reverse.
+
+### 2.2 Hexagonal Architecture (Ports & Adapters)
+
+```mermaid
+graph LR
+    subgraph DRIVING["Driving Side (Primary)"]
+        Flutter["Flutter Client<br/>(WebSocket)"]
+        NestJS["NestJS / Serverpod<br/>(gRPC)"]
+    end
+
+    subgraph CORE["Application Core"]
+        direction TB
+        P_IN["Inbound Ports"]
+        HANDLERS["Command & Query Handlers"]
+        MIDDLEWARE["Middleware Chain"]
+        P_OUT["Outbound Ports"]
+    end
+
+    subgraph DRIVEN["Driven Side (Secondary)"]
+        Redis["Redis"]
+        Postgres["PostgreSQL + pgvector"]
+        FalkorDB["FalkorDB"]
+        MCPServers["MCP Servers"]
+        OTel["OpenTelemetry"]
+        Langfuse["Langfuse"]
+        LangGraph["LangGraph"]
+    end
+
+    Flutter -->|WebSocket| P_IN
+    NestJS -->|gRPC| P_IN
+    P_IN --> MIDDLEWARE --> HANDLERS
+    HANDLERS --> P_OUT
+    P_OUT -->|MemoryPort| Redis
+    P_OUT -->|SessionPort + EmbeddingPort| Postgres
+    P_OUT -->|GraphStorePort| FalkorDB
+    P_OUT -->|ToolPort| MCPServers
+    P_OUT -->|TracingPort + MetricsPort| OTel
+    P_OUT -->|CostTrackingPort| Langfuse
+    P_OUT -->|GraphOrchestrationPort| LangGraph
+
+    style CORE fill:#2ECC71,color:#fff
+    style DRIVING fill:#4A90D9,color:#fff
+    style DRIVEN fill:#E67E22,color:#fff
+```
+
+### 2.3 Key Principles
 
 - **Ports** are interfaces defined by the domain's needs, not by tool APIs
 - **Primary adapters** (WebSocket, gRPC) translate external protocols into application commands/queries
 - **Secondary adapters** implement ports — swappable without touching domain or application layers
-- **Domain events** decouple cross-component communication (SLOBreached → AlertAdapter → PagerDuty)
+- **Domain events** decouple cross-component communication (SLOBreached → AlertPort → PagerDuty)
 - **Composition Root** (`runtime.py`) is the ONLY place that knows about concrete implementations
 - **CQRS**: Commands have side effects, Queries are read-only — separated at the handler level
 - **Shared Kernel**: Minimal shared types (AgentMessage, SessionId, EventBus) — nothing else
+
+### 2.4 Message Flow (Request Lifecycle)
+
+```mermaid
+sequenceDiagram
+    participant Client as Flutter Client
+    participant WS as WebSocket Adapter
+    participant MW as Middleware Chain
+    participant CMD as HandleMessageHandler
+    participant Kernel as AgentKernel
+    participant Graph as LangGraph
+    participant Tool as MCP Tool
+    participant Mem as Redis (MemoryPort)
+
+    Client->>WS: {"type": "message", "content": "..."}
+    WS->>WS: Construct & validate AgentMessage (Pydantic)
+    WS->>MW: AgentMessage
+
+    Note over MW: Tracing -> Auth -> RateLimit -> PII -> Metrics
+
+    MW->>CMD: Validated AgentMessage
+    CMD->>Mem: store_message()
+    CMD->>Kernel: route(persona_id)
+    Kernel->>Graph: astream_events(input, thread_id)
+
+    loop Graph Execution
+        Graph->>Tool: execute("mcp_zendesk_create_ticket", args)
+        Tool-->>Graph: ToolResult
+    end
+
+    Graph-->>CMD: StreamEvent (token)
+    CMD-->>MW: AgentMessage (stream_token)
+    MW-->>WS: Apply PII redaction on output
+    WS-->>Client: {"type": "stream_token", "token": "..."}
+
+    Note over CMD: publish(MessageProcessed) -> EventBus
+```
+
+### 2.5 CQRS Flow
+
+```mermaid
+graph LR
+    subgraph Commands["Commands (Write Side)"]
+        C1["HandleMessage"]
+        C2["CreateSession"]
+        C3["ResumeHITL"]
+        C4["ExecuteRoadmap"]
+        C5["OptimizeSkill"]
+    end
+
+    subgraph Queries["Queries (Read Side)"]
+        Q1["GetSession"]
+        Q2["ListPersonas"]
+        Q3["GetSLOStatus"]
+    end
+
+    subgraph Events["Domain Events"]
+        E1["MessageProcessed"]
+        E2["SessionCreated"]
+        E3["SLOBreached"]
+        E4["ToolDegraded"]
+    end
+
+    PA["Primary Adapters<br/>(WebSocket / gRPC)"]
+
+    PA -->|"write operations"| Commands
+    PA -->|"read operations"| Queries
+    Commands -->|"publish"| Events
+    Events -->|"notify"| HANDLERS["Event Handlers<br/>(via EventBus)"]
+
+    style Commands fill:#E74C3C,color:#fff
+    style Queries fill:#3498DB,color:#fff
+    style Events fill:#F39C12,color:#fff
+```
 
 ## 3. Folder Structure
 
@@ -301,15 +429,25 @@ class Session:
     updated_at: datetime
     metadata: dict[str, Any]
 
-    # Valid transitions:
-    # ACTIVE → PAUSED (explicit pause or connection drop)
-    # ACTIVE → ESCALATED (HITL or escalation rule triggered)
-    # ACTIVE → COMPLETED (graph finished or user ended)
-    # PAUSED → ACTIVE (resume)
-    # ESCALATED → ACTIVE (human responded)
-    # Any terminal state cannot transition back
     def transition_to(self, new_state: SessionState) -> None:
         """Raises InvalidTransitionError if transition is not allowed."""
+```
+
+#### Session State Machine
+
+```mermaid
+statediagram-v2
+    [*] --> ACTIVE : CreateSession
+    ACTIVE --> PAUSED : explicit pause / connection drop
+    ACTIVE --> ESCALATED : HITL node / escalation rule
+    ACTIVE --> COMPLETED : graph finished / user ended
+    PAUSED --> ACTIVE : resume (within TTL)
+    PAUSED --> COMPLETED : TTL expired
+    ESCALATED --> ACTIVE : human responded
+    COMPLETED --> [*]
+```
+
+```python
 
 class Persona:
     """Agent persona loaded from YAML + optional code registration."""
@@ -522,8 +660,23 @@ Note: The former `ObservabilityPort` is split into `TracingPort`, `MetricsPort`,
 
 Composable, ASGI-inspired. Each middleware wraps the next:
 
-```
-Request → Tracing → Auth → RateLimit → PII → Metrics → Handler → Response
+```mermaid
+graph LR
+    REQ["Incoming<br/>AgentMessage"] --> T["TracingMiddleware<br/><i>Phase 1</i>"]
+    T --> A["AuthMiddleware<br/><i>Phase 4</i>"]
+    A --> RL["RateLimitMiddleware<br/><i>Phase 2</i>"]
+    RL --> PII["PIIRedactionMiddleware<br/><i>Phase 4</i>"]
+    PII --> M["MetricsMiddleware<br/><i>Phase 3</i>"]
+    M --> H["Command Handler"]
+    H --> RESP["Response<br/>AgentMessage"]
+    RESP -.->|"reverse through chain<br/>(PII redacts output too)"| REQ
+
+    style T fill:#2ECC71,color:#fff
+    style A fill:#95A5A6,color:#fff
+    style RL fill:#95A5A6,color:#fff
+    style PII fill:#95A5A6,color:#fff
+    style M fill:#95A5A6,color:#fff
+    style H fill:#3498DB,color:#fff
 ```
 
 - **TracingMiddleware**: Creates OTel span, injects trace_id into AgentMessage
@@ -533,6 +686,53 @@ Request → Tracing → Auth → RateLimit → PII → Metrics → Handler → R
 - **MetricsMiddleware**: Records request duration, token count, status
 
 ### 6.5 Application Services (Meta-Orchestration)
+
+```mermaid
+graph TB
+    subgraph SUPERPOWERS["SuperpowersFlow (Full Engineering Cycle)"]
+        direction TB
+        SP1["Map Terrain<br/><i>analyze codebase</i>"]
+        SP2["Research Gaps<br/><i>security, UX, impl</i>"]
+        SP3["Brainstorm 2-3<br/>Approaches"]
+        SP4{{"HITL: User<br/>Chooses Approach"}}
+        SP5["Generate Spec"]
+        SP6["Create Roadmap"]
+        SP7{{"HITL: User<br/>Approves Roadmap"}}
+        SP1 --> SP2 --> SP3 --> SP4 --> SP5 --> SP6 --> SP7
+    end
+
+    subgraph GSD["GSD Sequencer (Spec-Driven Execution)"]
+        direction TB
+        G1["Phase 1: Task A"]
+        G2["Verify A"]
+        G3["Phase 1: Task B"]
+        G4["Verify B"]
+        G5["Gate: Phase 1 complete?"]
+        G6["Phase 2: Task C<br/><i>(fresh context,<br/>only summary of A+B)</i>"]
+        G1 --> G2 --> G3 --> G4 --> G5 -->|pass| G6
+        G5 -->|fail| G1
+    end
+
+    subgraph AUTO["AutoResearch Loop (Skill Self-Improvement)"]
+        direction TB
+        A1["Batch Execute<br/>Skill x10"]
+        A2["Evaluate with<br/>Binary Rules"]
+        A3{"Score<br/>improved?"}
+        A4["Mutate<br/>Instructions"]
+        A5["Keep Best<br/>Version"]
+        A1 --> A2 --> A3
+        A3 -->|no| A4 --> A1
+        A3 -->|yes| A5 --> A1
+        A3 -->|perfect| DONE["Done"]
+    end
+
+    SP7 -->|"approved"| GSD
+    GSD -->|"has skills to optimize"| AUTO
+
+    style SUPERPOWERS fill:#8E44AD,color:#fff
+    style GSD fill:#2980B9,color:#fff
+    style AUTO fill:#27AE60,color:#fff
+```
 
 **GSDSequencer**: Spec-Driven Development. Breaks complex tasks into sub-agent executions with isolated context. Each task gets a fresh context with only a compressed summary of prior results.
 
@@ -639,6 +839,24 @@ If a previously healthy tool fails at execution time (e.g., MCP server disconnec
 3. Dynamically deregisters the tool via `deregister_tool()`
 4. On MCP server reconnection, re-runs healthcheck and re-registers if healthy
 
+```mermaid
+statediagram-v2
+    [*] --> Discovery : MCPBridge.start()
+    Discovery --> Healthcheck : tool found
+    Healthcheck --> Registered : healthcheck passed
+    Healthcheck --> Excluded : healthcheck failed
+    Excluded --> [*] : logged as warning, LLM never sees tool
+
+    Registered --> Healthy : serving requests
+    Healthy --> Degraded : execution failure / MCP disconnect
+    Degraded --> Deregistered : deregister_tool() + ToolDegraded event
+    Deregistered --> Healthcheck : MCP server reconnects
+    Healthy --> Healthy : successful execution
+
+    note right of Degraded : LLM stops seeing tool immediately
+    note right of Healthy : ToolRecovered event on re-registration
+```
+
 ```python
 class ToolHealthStatus(BaseModel):
     tool_name: str
@@ -678,25 +896,79 @@ Building block nodes (reusable across templates): `PlannerNode`, `ReflectorNode`
 
 Consumer can use templates OR build fully custom graphs by extending `BaseAgentGraph`.
 
+#### Graph Template Topologies
+
+```mermaid
+graph LR
+    subgraph REACT["react (default)"]
+        R1["Think"] --> R2["Act"] --> R3["Observe"]
+        R3 -->|loop| R1
+        R3 -->|done| R4["End"]
+    end
+```
+
+```mermaid
+graph LR
+    subgraph PE["plan-and-execute"]
+        P1["Plan<br/>(multi-step)"] --> P2["Execute<br/>Step 1"] --> P3["Execute<br/>Step 2"] --> P4["..."] --> P5["Replan?"]
+        P5 -->|yes| P1
+        P5 -->|no| P6["End"]
+    end
+```
+
+```mermaid
+graph LR
+    subgraph REF["reflexion (wraps any template)"]
+        F1["Act"] --> F2["Self-<br/>Critique"] --> F3{"Quality<br/>OK?"}
+        F3 -->|no| F4["Retry with<br/>feedback"] --> F1
+        F3 -->|yes| F5["End"]
+    end
+```
+
+```mermaid
+graph TB
+    subgraph SUP["supervisor"]
+        S1["Supervisor<br/>Router"]
+        S1 -->|"support query"| S2["Support<br/>Agent"]
+        S1 -->|"billing query"| S3["Billing<br/>Agent"]
+        S1 -->|"technical"| S4["Tech<br/>Agent"]
+        S2 & S3 & S4 -->|result| S1
+        S1 --> S5["Final<br/>Response"]
+    end
+```
+
+```mermaid
+graph LR
+    subgraph COMP["llm-compiler"]
+        C1["Plan<br/>as DAG"] --> C2["Tool A"] & C3["Tool B"] & C4["Tool C"]
+        C2 & C3 & C4 --> C5["Join<br/>Results"]
+    end
+```
+
 ### 9.1 Decision Tree (for AGENTS.md)
 
-```
-Does your agent use tools?
-  └─ No → Direct LLM (no graph needed)
-  └─ Yes → Does it need to plan multiple steps before acting?
-              └─ No → react (default, 80% of cases)
-              └─ Yes → Are the steps independent?
-                        └─ Yes → llm-compiler (parallel execution)
-                        └─ No → plan-and-execute
+```mermaid
+graph TD
+    START{"Does your agent<br/>use tools?"} -->|No| DIRECT["Direct LLM<br/><i>no graph needed</i>"]
+    START -->|Yes| PLAN{"Needs to plan<br/>multiple steps<br/>before acting?"}
+    PLAN -->|No| RE["react<br/><i>default, 80% of cases</i>"]
+    PLAN -->|Yes| INDEP{"Are steps<br/>independent?"}
+    INDEP -->|Yes| LLC["llm-compiler<br/><i>parallel execution</i>"]
+    INDEP -->|No| PE["plan-and-execute"]
 
-Does the output quality justify retry loops? (orthogonal — can wrap ANY template above)
-  └─ Yes → reflexion (adds self-critique + retry on top of chosen template)
+    QUALITY{"Output quality<br/>justifies retry loops?<br/><i>(orthogonal)</i>"} -->|Yes| REF["reflexion<br/><i>wraps any template above</i>"]
 
-Do you have multiple agent personas that collaborate?
-  └─ Yes → supervisor (orchestrates the others)
+    MULTI{"Multiple personas<br/>that collaborate?"} -->|Yes| SUP["supervisor"]
 
-Do you need full autonomous development cycles?
-  └─ Yes → orchestrator (GSD + Superpowers + Auto Research)
+    AUTONOMOUS{"Full autonomous<br/>dev cycles?"} -->|Yes| ORCH["orchestrator<br/><i>GSD + Superpowers<br/>+ Auto Research</i>"]
+
+    style RE fill:#2ECC71,color:#fff
+    style PE fill:#3498DB,color:#fff
+    style LLC fill:#9B59B6,color:#fff
+    style REF fill:#E67E22,color:#fff
+    style SUP fill:#E74C3C,color:#fff
+    style ORCH fill:#1ABC9C,color:#fff
+    style DIRECT fill:#95A5A6,color:#fff
 ```
 
 Note: `reflexion` is an orthogonal concern — it can wrap any base template to add self-critique. For example, `plan-and-execute` + `reflexion` means each execution step gets a self-critique pass before proceeding.
@@ -808,6 +1080,35 @@ Sidecar mode forces `ws_host` and `grpc_host` to `127.0.0.1`.
 
 ### 12.1 Modes
 
+```mermaid
+graph TB
+    subgraph STANDALONE["Standalone Mode"]
+        direction TB
+        subgraph POD_S["Pod: agentic-core"]
+            AC_S["agentic-core<br/>0.0.0.0:8765 (WS)<br/>0.0.0.0:50051 (gRPC)"]
+        end
+        subgraph POD_B["Pod: backend"]
+            NEST_S["NestJS / Serverpod"]
+        end
+        NEST_S -->|"gRPC (service DNS)"| AC_S
+        CLIENT_S["Flutter Client"] -->|"WebSocket (Ingress)"| AC_S
+    end
+
+    subgraph SIDECAR["Sidecar Mode"]
+        direction TB
+        subgraph POD_SC["Pod (shared network namespace)"]
+            AC_SC["agentic-core<br/>127.0.0.1:8765 (WS)<br/>127.0.0.1:50051 (gRPC)"]
+            NEST_SC["NestJS / Serverpod"]
+            NEST_SC -->|"gRPC localhost"| AC_SC
+        end
+        CLIENT_SC["Flutter Client"] -->|"WebSocket (Ingress)"| AC_SC
+    end
+
+    style STANDALONE fill:#3498DB,color:#fff
+    style SIDECAR fill:#E67E22,color:#fff
+    style POD_SC fill:#D35400,color:#fff
+```
+
 - **Standalone**: Own Deployment/StatefulSet. Scales independently. Binds 0.0.0.0.
 - **Sidecar**: Container in same Pod as backend. Binds 127.0.0.1. Shares Pod network.
 
@@ -819,7 +1120,7 @@ Helm chart supports both via `values.yaml` / `values-sidecar.yaml`.
 - **cd.yaml**: Docker multi-stage build → push to registry (on main merge)
 - **release.yaml**: Semantic versioning → PyPI publish (on tag)
 
-### 12.4 Logging Strategy
+### 12.3 Logging Strategy
 
 `structlog` is the standard logger, configured as a bound logger per-request with automatic context injection:
 
@@ -840,11 +1141,60 @@ Log levels:
 
 Output format: JSON in production (for Loki/ELK ingestion), console-colored in development. Configured via `AGENTIC_LOG_FORMAT=json|console`.
 
-### 12.3 GitOps
+### 12.4 GitOps
+
+```mermaid
+graph LR
+    DEV["Developer"] -->|"git push"| GH["GitHub<br/>(main branch)"]
+    GH -->|"trigger"| CI["CI: lint + type<br/>+ test + scan"]
+    CI -->|"pass"| CD["CD: Docker build<br/>+ push to registry"]
+    CD -->|"update image tag in"| GITOPS["GitOps Repo<br/>(k8s manifests)"]
+    GITOPS -->|"ArgoCD detects change"| DEV_C["Dev Cluster<br/><i>auto-sync</i>"]
+    DEV_C -->|"manual approval"| STG["Staging Cluster"]
+    STG -->|"manual approval"| PROD["Production Cluster"]
+
+    style CI fill:#F39C12,color:#fff
+    style CD fill:#3498DB,color:#fff
+    style DEV_C fill:#2ECC71,color:#fff
+    style STG fill:#E67E22,color:#fff
+    style PROD fill:#E74C3C,color:#fff
+```
 
 ArgoCD Application with app-of-apps pattern. Kustomize overlays for dev/staging/production. Environment promotion via manual sync gates.
 
 ## 13. Implementation Phases
+
+```mermaid
+gantt
+    title agentic-core Implementation Phases
+    dateFormat YYYY-MM-DD
+    axisFormat %b %d
+
+    section Phase 1: Core
+    shared_kernel (types, events)           :p1a, 2026-03-26, 2d
+    domain layer (entities, VOs, events)    :p1b, after p1a, 3d
+    application layer (ports, cmd/qry)      :p1c, after p1b, 3d
+    primary adapters (WS + gRPC)            :p1d, after p1c, 4d
+    config + runtime + proto                :p1e, after p1d, 2d
+    pyproject.toml + CI                     :p1f, after p1e, 1d
+
+    section Phase 2: Memory + RAG
+    secondary adapters (Redis, PG, etc.)    :p2a, after p1f, 5d
+    graph templates + building blocks       :p2b, after p2a, 5d
+    RAG pipeline + MCP bridge               :p2c, after p2b, 4d
+    persona discovery + registry            :p2d, after p2c, 2d
+
+    section Phase 3: Observability + SRE
+    OTel + Langfuse adapters                :p3a, after p2d, 3d
+    SLO tracker + chaos hooks               :p3b, after p3a, 3d
+    Meta-orchestration (GSD, Auto Research) :p3c, after p3b, 5d
+
+    section Phase 4: Security + Deploy
+    Auth, RateLimit, PII middleware          :p4a, after p3c, 3d
+    Helm + ArgoCD + Terraform               :p4b, after p4a, 4d
+    Dockerfile + GH Actions                 :p4c, after p4b, 2d
+    README, AGENTS.md, SLO.md, examples     :p4d, after p4c, 3d
+```
 
 ### Phase 1 (this spec): Core + Transport + Runtime
 - shared_kernel (types, events)
