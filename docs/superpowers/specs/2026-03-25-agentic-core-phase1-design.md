@@ -436,7 +436,7 @@ class Session:
 #### Session State Machine
 
 ```mermaid
-statediagram-v2
+stateDiagram-v2
     [*] --> ACTIVE : CreateSession
     ACTIVE --> PAUSED : explicit pause / connection drop
     ACTIVE --> ESCALATED : HITL node / escalation rule
@@ -840,7 +840,7 @@ If a previously healthy tool fails at execution time (e.g., MCP server disconnec
 4. On MCP server reconnection, re-runs healthcheck and re-registers if healthy
 
 ```mermaid
-statediagram-v2
+stateDiagram-v2
     [*] --> Discovery : MCPBridge.start()
     Discovery --> Healthcheck : tool found
     Healthcheck --> Registered : healthcheck passed
