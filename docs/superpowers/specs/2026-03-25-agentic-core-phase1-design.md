@@ -247,6 +247,7 @@ agentic-core/
 │   │   │   ├── tracing.py        # TracingPort
 │   │   │   ├── metrics.py        # MetricsPort
 │   │   │   ├── cost_tracking.py  # CostTrackingPort
+│   │   │   ├── logging.py        # LoggingPort
 │   │   │   ├── graph.py          # GraphOrchestrationPort
 │   │   │   └── alert.py          # AlertPort
 │   │   ├── commands/
@@ -291,6 +292,8 @@ agentic-core/
 │   │       ├── falkordb_adapter.py
 │   │       ├── langfuse_adapter.py
 │   │       ├── otel_adapter.py
+│   │       ├── structlog_adapter.py
+│   │       ├── alertmanager_adapter.py
 │   │       ├── mcp_bridge_adapter.py
 │   │       └── langgraph_adapter.py
 │   ├── graph_templates/          # Pre-built LangGraph patterns
@@ -326,7 +329,9 @@ agentic-core/
 │   │           ├── sidecar-injector.yaml
 │   │           ├── service.yaml
 │   │           ├── hpa.yaml
-│   │           └── servicemonitor.yaml
+│   │           ├── servicemonitor.yaml
+│   │           ├── prometheusrule.yaml       # Alerting rules
+│   │           └── otel-collector-config.yaml # OTel Collector sidecar
 │   ├── argocd/
 │   │   ├── application.yaml
 │   │   └── overlays/
@@ -336,6 +341,13 @@ agentic-core/
 │   ├── terraform/
 │   │   └── examples/
 │   │       └── aws/              # EKS + RDS + ElastiCache
+│   ├── grafana/
+│   │   └── dashboards/
+│   │       ├── agent-overview.json
+│   │       ├── agent-deep-dive.json
+│   │       ├── slo-compliance.json
+│   │       ├── llm-cost.json
+│   │       └── mcp-health.json
 │   └── docker/
 │       └── Dockerfile            # Multi-stage, non-root, distroless
 ├── .github/workflows/
@@ -621,8 +633,16 @@ class CostTrackingPort(ABC):
     async def record_generation(self, model: str, input_tokens: int,
                                  output_tokens: int, metadata: dict) -> None: ...
 
+class LoggingPort(ABC):
+    """Structured logging with trace correlation. Implemented by StructlogAdapter."""
+    @abstractmethod
+    def bind_context(self, **kwargs: Any) -> None:
+        """Bind contextual fields (trace_id, session_id) to current request scope."""
+    @abstractmethod
+    def log(self, level: str, event: str, **kwargs: Any) -> None: ...
+
 class AlertPort(ABC):
-    """Fire alerts to external systems (PagerDuty, Slack, etc.)."""
+    """Fire alerts to Prometheus Alertmanager."""
     @abstractmethod
     async def fire(self, severity: str, summary: str, details: dict) -> None: ...
 ```
@@ -638,9 +658,10 @@ class AlertPort(ABC):
 | `TracingPort` | `OTelAdapter` |
 | `MetricsPort` | `OTelAdapter` |
 | `CostTrackingPort` | `LangfuseAdapter` |
-| `AlertPort` | `AlertManagerAdapter` (stub) |
+| `LoggingPort` | `StructlogAdapter` |
+| `AlertPort` | `AlertManagerAdapter` |
 
-Note: The former `ObservabilityPort` is split into `TracingPort`, `MetricsPort`, and `CostTrackingPort` to avoid ambiguous multi-adapter composition. Each port has exactly one adapter.
+Note: The former `ObservabilityPort` is split into `TracingPort`, `MetricsPort`, `CostTrackingPort`, and `LoggingPort` to avoid ambiguous multi-adapter composition. Each port has exactly one adapter. All signals correlate via `trace_id`.
 
 ### 6.2 Commands (side effects)
 
@@ -874,10 +895,433 @@ class ToolError(BaseModel):
     retriable: bool
 ```
 
-### 8.3 Observability Adapters
+### 8.3 Observability Stack
 
-- **OTelAdapter** → implements `TracingPort` + `MetricsPort`: Prometheus metrics on `/metrics`, Jaeger/OTLP trace export
-- **LangfuseAdapter** → implements `CostTrackingPort`: per-execution cost tracking, trace visualization, FinOps reporting
+The observability stack follows the **three pillars** (metrics, traces, logs) plus cost tracking and alerting. All signals are correlated via `trace_id`.
+
+#### 8.3.1 Stack Architecture
+
+```mermaid
+graph TB
+    subgraph AGENTIC["agentic-core Process"]
+        APP["Application Code"]
+        OTEL_SDK["OpenTelemetry SDK<br/>(auto-instrumentation)"]
+        STRUCTLOG["structlog<br/>(JSON logger)"]
+        PROM_EXP["/metrics endpoint<br/>(Prometheus format)"]
+        LANGFUSE_SDK["Langfuse SDK"]
+
+        APP -->|"spans"| OTEL_SDK
+        APP -->|"logs with trace_id"| STRUCTLOG
+        APP -->|"token counts + cost"| LANGFUSE_SDK
+        OTEL_SDK -->|"expose"| PROM_EXP
+    end
+
+    subgraph COLLECTOR["OpenTelemetry Collector (Sidecar/DaemonSet)"]
+        RECV["Receivers<br/>OTLP (gRPC/HTTP)"]
+        PROC["Processors<br/>batch, memory_limiter,<br/>attributes, tail_sampling"]
+        EXP["Exporters"]
+    end
+
+    subgraph STORAGE["Observability Backend"]
+        PROM["Prometheus<br/><i>Metrics (TSDB)</i><br/>retention: 15d"]
+        TEMPO["Grafana Tempo<br/><i>Traces (object storage)</i><br/>retention: 30d"]
+        LOKI["Grafana Loki<br/><i>Logs (label-indexed)</i><br/>retention: 30d"]
+        AM["Alertmanager<br/><i>Alert routing + grouping</i>"]
+        LANGFUSE["Langfuse<br/><i>LLM cost + traces</i>"]
+    end
+
+    subgraph VIZ["Visualization"]
+        GRAFANA["Grafana<br/><i>Dashboards + Explore</i>"]
+    end
+
+    OTEL_SDK -->|"OTLP gRPC :4317"| RECV
+    STRUCTLOG -->|"stdout → Promtail/Alloy"| LOKI
+    PROM_EXP -->|"scrape :9090/metrics"| PROM
+    LANGFUSE_SDK -->|"HTTPS"| LANGFUSE
+
+    RECV --> PROC --> EXP
+    EXP -->|"traces"| TEMPO
+    EXP -->|"metrics"| PROM
+
+    PROM -->|"alerting rules"| AM
+    AM -->|"PagerDuty / Slack / Email"| NOTIFY["Notifications"]
+
+    PROM & TEMPO & LOKI --> GRAFANA
+    LANGFUSE --> GRAFANA
+
+    style AGENTIC fill:#2ECC71,color:#fff
+    style COLLECTOR fill:#3498DB,color:#fff
+    style STORAGE fill:#8E44AD,color:#fff
+    style VIZ fill:#E67E22,color:#fff
+```
+
+#### 8.3.2 Signal Correlation
+
+All three pillars are correlated via `trace_id` enabling seamless drill-down in Grafana:
+
+```mermaid
+graph LR
+    DASH["Grafana Dashboard<br/><i>agent_request_duration_seconds</i>"]
+    DASH -->|"Exemplar click<br/>(trace_id on metric)"| TEMPO_TRACE["Tempo: Full Trace<br/><i>graph nodes, tool calls, LLM</i>"]
+    TEMPO_TRACE -->|"Logs for this trace<br/>{trace_id=abc123}"| LOKI_LOGS["Loki: Structured Logs<br/><i>node transitions, errors</i>"]
+    TEMPO_TRACE -->|"Cost for this trace"| LANGFUSE_TRACE["Langfuse: Cost<br/><i>tokens, model, $/request</i>"]
+
+    style DASH fill:#E67E22,color:#fff
+    style TEMPO_TRACE fill:#3498DB,color:#fff
+    style LOKI_LOGS fill:#2ECC71,color:#fff
+    style LANGFUSE_TRACE fill:#9B59B6,color:#fff
+```
+
+#### 8.3.3 Adapters
+
+**OTelAdapter** → implements `TracingPort` + `MetricsPort`
+
+```python
+class OTelAdapter(TracingPort, MetricsPort):
+    """Configures OpenTelemetry SDK with OTLP exporter + Prometheus metrics."""
+
+    def __init__(self, settings: AgenticSettings):
+        # Tracer provider → OTLP exporter → OTel Collector → Tempo
+        self._tracer_provider = TracerProvider(
+            resource=Resource.create({
+                "service.name": "agentic-core",
+                "service.version": settings.version,
+                "deployment.environment": settings.environment,
+            }),
+            sampler=TraceIdRatioBased(settings.otel_sample_rate),  # default 1.0
+        )
+        self._tracer_provider.add_span_processor(
+            BatchSpanProcessor(OTLPSpanExporter(endpoint=settings.otel_endpoint))
+        )
+
+        # Meter provider → Prometheus exporter → scraped by Prometheus
+        self._meter_provider = MeterProvider(
+            resource=self._tracer_provider.resource,
+            metric_readers=[PrometheusMetricReader()],
+        )
+
+    # TracingPort implementation
+    def start_span(self, name: str, attributes: dict) -> Span:
+        return self._tracer.start_span(name, attributes=attributes)
+
+    # MetricsPort implementation — pre-defined agent metrics
+    def _register_metrics(self):
+        meter = self._meter_provider.get_meter("agentic_core")
+
+        self.request_duration = meter.create_histogram(
+            "agent_request_duration_seconds",
+            description="Agent request latency",
+            unit="s",
+        )
+        self.requests_total = meter.create_counter(
+            "agent_requests_total",
+            description="Total agent requests",
+        )
+        self.tokens_total = meter.create_counter(
+            "agent_tokens_total",
+            description="Total LLM tokens consumed",
+        )
+        self.active_sessions = meter.create_up_down_counter(
+            "agent_active_sessions",
+            description="Currently active sessions",
+        )
+        self.errors_total = meter.create_counter(
+            "agent_errors_total",
+            description="Total agent errors",
+        )
+        self.tool_executions = meter.create_histogram(
+            "agent_tool_execution_seconds",
+            description="Tool execution latency",
+            unit="s",
+        )
+        self.memory_operations = meter.create_counter(
+            "agent_memory_operations_total",
+            description="Memory store operations",
+        )
+        self.error_budget_remaining = meter.create_observable_gauge(
+            "agent_error_budget_remaining_ratio",
+            description="Remaining error budget (0.0-1.0)",
+            callbacks=[self._observe_error_budget],
+        )
+```
+
+**Pre-defined Prometheus metrics:**
+
+| Metric | Type | Labels | Purpose |
+|--------|------|--------|---------|
+| `agent_request_duration_seconds` | Histogram | `persona_id`, `status`, `graph_template` | Latency SLI (p50, p95, p99) |
+| `agent_requests_total` | Counter | `persona_id`, `status`, `transport` | Throughput + success rate SLI |
+| `agent_tokens_total` | Counter | `persona_id`, `model`, `direction` | Token consumption for FinOps |
+| `agent_active_sessions` | UpDownCounter | `persona_id` | Concurrency monitoring |
+| `agent_errors_total` | Counter | `persona_id`, `error_type` | Error rate SLI |
+| `agent_tool_execution_seconds` | Histogram | `tool_name`, `source` | Tool latency monitoring |
+| `agent_memory_operations_total` | Counter | `store`, `operation` | Memory store health |
+| `agent_error_budget_remaining_ratio` | Gauge | `persona_id`, `sli_name` | SLO compliance |
+| `agent_hitl_escalations_total` | Counter | `persona_id`, `reason` | Human escalation tracking |
+| `agent_mcp_server_status` | Gauge | `server_name`, `status` | MCP server health (1=up, 0=down) |
+
+**LangfuseAdapter** → implements `CostTrackingPort`
+
+```python
+class LangfuseAdapter(CostTrackingPort):
+    """Langfuse integration for LLM cost tracking + generation tracing."""
+
+    async def record_generation(self, model: str, input_tokens: int,
+                                 output_tokens: int, metadata: dict) -> None:
+        self._langfuse.generation(
+            name=metadata.get("node_name", "llm_call"),
+            model=model,
+            usage={"input": input_tokens, "output": output_tokens},
+            metadata={
+                "persona_id": metadata["persona_id"],
+                "session_id": metadata["session_id"],
+                "trace_id": metadata.get("trace_id"),  # Correlate with OTel
+            },
+        )
+```
+
+**AlertManagerAdapter** → implements `AlertPort`
+
+```python
+class AlertManagerAdapter(AlertPort):
+    """Pushes alerts to Prometheus Alertmanager via HTTP API."""
+
+    async def fire(self, severity: str, summary: str, details: dict) -> None:
+        await self._http_client.post(
+            f"{self._alertmanager_url}/api/v2/alerts",
+            json=[{
+                "labels": {
+                    "alertname": details.get("alert_name", "AgenticCoreAlert"),
+                    "severity": severity,       # "critical" | "warning"
+                    "persona_id": details.get("persona_id", "unknown"),
+                    "service": "agentic-core",
+                },
+                "annotations": {
+                    "summary": summary,
+                    "description": details.get("description", ""),
+                    "runbook_url": details.get("runbook_url", ""),
+                },
+            }],
+        )
+```
+
+#### 8.3.4 Alerting Rules (deployed as PrometheusRule CRD)
+
+```yaml
+# deployment/helm/agentic-core/templates/prometheusrule.yaml
+groups:
+  - name: agentic-core.rules
+    rules:
+      # High error rate
+      - alert: AgentHighErrorRate
+        expr: |
+          sum(rate(agent_errors_total[5m])) by (persona_id)
+          / sum(rate(agent_requests_total[5m])) by (persona_id)
+          > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Agent {{ $labels.persona_id }} error rate > 5%"
+          runbook_url: "https://docs.example.com/runbooks/agent-high-error-rate"
+
+      # High latency (p99)
+      - alert: AgentHighLatencyP99
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(agent_request_duration_seconds_bucket[5m])) by (le, persona_id)
+          ) > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Agent {{ $labels.persona_id }} p99 latency > 5s"
+
+      # Error budget burn rate (SLO)
+      - alert: AgentErrorBudgetBurnRate
+        expr: agent_error_budget_remaining_ratio < 0.25
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Agent {{ $labels.persona_id }} error budget < 25% remaining"
+
+      # MCP server down
+      - alert: MCPServerDown
+        expr: agent_mcp_server_status == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MCP server {{ $labels.server_name }} is down"
+
+      # Session count spike (possible abuse)
+      - alert: AgentSessionSpike
+        expr: |
+          agent_active_sessions > 500
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Active sessions > 500, possible abuse or leak"
+
+      # HITL escalation rate too high
+      - alert: AgentHighEscalationRate
+        expr: |
+          sum(rate(agent_hitl_escalations_total[15m])) by (persona_id)
+          / sum(rate(agent_requests_total[15m])) by (persona_id)
+          > 0.3
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Agent {{ $labels.persona_id }} escalation rate > 30%"
+```
+
+#### 8.3.5 OpenTelemetry Collector Configuration
+
+```yaml
+# deployment/helm/agentic-core/templates/otel-collector-config.yaml
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+  attributes:
+    actions:
+      - key: deployment.environment
+        action: upsert
+        from_attribute: AGENTIC_ENVIRONMENT
+  tail_sampling:
+    decision_wait: 10s
+    policies:
+      - name: errors-always
+        type: status_code
+        status_code: { status_codes: [ERROR] }
+      - name: slow-traces
+        type: latency
+        latency: { threshold_ms: 5000 }
+      - name: probabilistic
+        type: probabilistic
+        probabilistic: { sampling_percentage: 10 }
+
+exporters:
+  otlp/tempo:
+    endpoint: tempo.observability.svc:4317
+    tls:
+      insecure: true
+  prometheus:
+    endpoint: 0.0.0.0:8889
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, tail_sampling, batch]
+      exporters: [otlp/tempo]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
+```
+
+#### 8.3.6 Grafana Dashboards
+
+The library ships with pre-built Grafana dashboard JSON models in `deployment/grafana/`:
+
+| Dashboard | Panels | Data Sources |
+|-----------|--------|-------------|
+| **Agent Overview** | Request rate, error rate, latency heatmap, active sessions, top personas | Prometheus |
+| **Agent Deep Dive** | Per-persona latency, tool execution breakdown, token consumption, HITL rate | Prometheus |
+| **Trace Explorer** | Service map, trace waterfall, span details | Tempo |
+| **Log Explorer** | Log volume by level, error log stream, search by trace_id | Loki |
+| **SLO Compliance** | Error budget burn, SLI trends, SLO status per persona | Prometheus |
+| **LLM Cost** | Cost per persona, cost per model, daily/weekly trends, token distribution | Langfuse (via JSON API datasource) |
+| **MCP Health** | Server status, tool registry changes, reconnection events | Prometheus + Loki |
+
+#### 8.3.7 Logging Pipeline (structlog → Loki)
+
+```mermaid
+graph LR
+    APP["agentic-core<br/>(structlog JSON to stdout)"] -->|"container stdout"| ALLOY["Grafana Alloy<br/>(DaemonSet log collector)"]
+    ALLOY -->|"label extraction:<br/>persona_id, level, trace_id"| LOKI["Loki<br/>(log storage)"]
+    LOKI --> GRAFANA["Grafana<br/>Explore / LogQL"]
+
+    style APP fill:#2ECC71,color:#fff
+    style ALLOY fill:#3498DB,color:#fff
+    style LOKI fill:#8E44AD,color:#fff
+    style GRAFANA fill:#E67E22,color:#fff
+```
+
+```python
+# structlog configuration in runtime.py
+import structlog
+
+def configure_logging(settings: AgenticSettings):
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,      # trace_id, session_id auto-injected
+            structlog.processors.add_log_level,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.StackInfoRenderer(),
+            # Production: JSON for Loki ingestion
+            # Development: console-colored for readability
+            structlog.dev.ConsoleRenderer() if settings.log_format == "console"
+            else structlog.processors.JSONRenderer(),
+        ],
+        logger_factory=structlog.PrintLoggerFactory(),
+    )
+```
+
+Log output example (JSON, ingested by Loki):
+```json
+{
+  "event": "graph_node_completed",
+  "level": "info",
+  "timestamp": "2026-03-25T14:30:00.123Z",
+  "trace_id": "abc123def456",
+  "session_id": "sess_789",
+  "persona_id": "support-agent",
+  "node_name": "action_node",
+  "duration_ms": 1234,
+  "tool_calls": 2
+}
+```
+
+Grafana Alloy (or Promtail) extracts labels from JSON fields for efficient LogQL queries:
+```logql
+{service="agentic-core", persona_id="support-agent"} | json | level="error"
+{service="agentic-core"} | json | trace_id="abc123def456"
+sum(rate({service="agentic-core"} | json | level="error" [5m])) by (persona_id)
+```
+
+#### 8.3.8 Configuration Extensions
+
+```python
+# Added to AgenticSettings
+class ObservabilitySettings(BaseModel):
+    otel_endpoint: str = "http://otel-collector:4317"
+    otel_sample_rate: float = 1.0          # 1.0 = sample everything, 0.1 = 10%
+    otel_export_protocol: Literal["grpc", "http"] = "grpc"
+    prometheus_port: int = 9090            # /metrics endpoint port
+    langfuse_host: str = "https://cloud.langfuse.com"
+    langfuse_public_key: str | None = None
+    langfuse_secret_key: str | None = None
+    alertmanager_url: str | None = None    # http://alertmanager:9093
+    log_format: Literal["json", "console"] = "json"
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+```
 
 ## 9. Graph Templates
 
@@ -1120,12 +1564,11 @@ Helm chart supports both via `values.yaml` / `values-sidecar.yaml`.
 - **cd.yaml**: Docker multi-stage build → push to registry (on main merge)
 - **release.yaml**: Semantic versioning → PyPI publish (on tag)
 
-### 12.3 Logging Strategy
+### 12.3 Logging Strategy (Quick Reference)
 
 `structlog` is the standard logger, configured as a bound logger per-request with automatic context injection:
 
 ```python
-# Every request gets a logger bound with:
 log = structlog.get_logger().bind(
     trace_id=message.trace_id,
     session_id=message.session_id,
@@ -1139,7 +1582,7 @@ Log levels:
 - `WARNING`: HITL escalation, SLO approaching threshold, MCP reconnection
 - `ERROR`: Graph execution failure, adapter connection lost, invalid input rejected
 
-Output format: JSON in production (for Loki/ELK ingestion), console-colored in development. Configured via `AGENTIC_LOG_FORMAT=json|console`.
+Output: JSON in production (Loki ingestion), console-colored in dev. See Section 8.3.7 for full pipeline details.
 
 ### 12.4 GitOps
 
@@ -1264,7 +1707,11 @@ all = [
     "falkordb>=1.0",
     "opentelemetry-api>=1.20",
     "opentelemetry-sdk>=1.20",
+    "opentelemetry-exporter-otlp>=1.20",
+    "opentelemetry-exporter-prometheus>=0.45",
+    "opentelemetry-instrumentation-grpc>=0.45",
     "langfuse>=2.0",
+    "httpx>=0.27",
     "presidio-analyzer>=2.2",
     "mcp>=1.0",
 ]
