@@ -241,7 +241,8 @@ agentic-core/
 │   │   │   ├── __init__.py
 │   │   │   ├── memory.py         # MemoryPort
 │   │   │   ├── session.py        # SessionPort
-│   │   │   ├── embedding.py      # EmbeddingPort
+│   │   │   ├── embedding_provider.py  # EmbeddingProviderPort
+│   │   │   ├── embedding_store.py    # EmbeddingStorePort
 │   │   │   ├── graph_store.py    # GraphStorePort
 │   │   │   ├── tool.py           # ToolPort
 │   │   │   ├── tracing.py        # TracingPort
@@ -288,6 +289,9 @@ agentic-core/
 │   │       ├── __init__.py
 │   │       ├── redis_adapter.py
 │   │       ├── postgres_adapter.py
+│   │       ├── gemini_embedding_adapter.py
+│   │       ├── openai_embedding_adapter.py
+│   │       ├── local_embedding_adapter.py
 │   │       ├── pgvector_adapter.py
 │   │       ├── falkordb_adapter.py
 │   │       ├── langfuse_adapter.py
@@ -532,6 +536,18 @@ Note: Domain events reference Ports, never concrete adapters. The Composition Ro
 ### 5.4 Enums
 
 ```python
+class EmbeddingTaskType(str, Enum):
+    """Task-specific optimization for embedding generation.
+    Providers that support task types (Gemini, Cohere) use these to optimize vectors."""
+    SEMANTIC_SIMILARITY = "SEMANTIC_SIMILARITY"
+    RETRIEVAL_QUERY = "RETRIEVAL_QUERY"
+    RETRIEVAL_DOCUMENT = "RETRIEVAL_DOCUMENT"
+    CODE_RETRIEVAL_QUERY = "CODE_RETRIEVAL_QUERY"
+    CLASSIFICATION = "CLASSIFICATION"
+    CLUSTERING = "CLUSTERING"
+    QUESTION_ANSWERING = "QUESTION_ANSWERING"
+    FACT_VERIFICATION = "FACT_VERIFICATION"
+
 class SessionState(str, Enum):
     ACTIVE = "active"
     PAUSED = "paused"
@@ -574,12 +590,51 @@ class SessionPort(ABC):
     @abstractmethod
     async def load_checkpoint(self, checkpoint_id: str) -> bytes: ...
 
-class EmbeddingPort(ABC):
-    """Semantic search over vector embeddings."""
+class EmbeddingProviderPort(ABC):
+    """Generate embeddings from content. Decoupled from storage.
+    Supports multiple providers: Gemini Embedding, OpenAI, local models."""
+
     @abstractmethod
-    async def store(self, text: str, embedding: list[float], metadata: dict) -> None: ...
+    async def embed_text(self, text: str, task_type: EmbeddingTaskType | None = None,
+                         dimensions: int | None = None) -> list[float]:
+        """Generate embedding for text. Dimensions configurable via Matryoshka."""
+
+    @abstractmethod
+    async def embed_batch(self, texts: list[str], task_type: EmbeddingTaskType | None = None,
+                          dimensions: int | None = None) -> list[list[float]]:
+        """Batch embedding generation for ingestion pipelines."""
+
+    @abstractmethod
+    async def embed_multimodal(self, content: MultimodalContent,
+                                task_type: EmbeddingTaskType | None = None,
+                                dimensions: int | None = None) -> list[float]:
+        """Generate embedding from multimodal content (text + images + audio + video + PDF).
+        Only supported by providers that handle multimodal input (e.g., Gemini Embedding)."""
+
+    @property
+    @abstractmethod
+    def supported_modalities(self) -> list[str]:
+        """Return list of supported modalities: ['text'], or ['text','image','audio','video','pdf']."""
+
+    @property
+    @abstractmethod
+    def max_dimensions(self) -> int:
+        """Maximum embedding dimensions this provider supports."""
+
+    @property
+    @abstractmethod
+    def default_dimensions(self) -> int:
+        """Default embedding dimensions."""
+
+class EmbeddingStorePort(ABC):
+    """Store and search over vector embeddings (pgvector). Provider-agnostic."""
+    @abstractmethod
+    async def store(self, embedding: list[float], metadata: dict) -> None: ...
     @abstractmethod
     async def search(self, query_embedding: list[float], top_k: int = 5) -> list[SearchResult]: ...
+    @abstractmethod
+    async def ensure_dimensions(self, dimensions: int) -> None:
+        """Ensure the vector index supports the given dimensionality."""
 
 class GraphStorePort(ABC):
     """Knowledge graph for entity relations."""
@@ -651,7 +706,8 @@ class AlertPort(ABC):
 |------|----------------|
 | `MemoryPort` | `RedisAdapter` |
 | `SessionPort` | `PostgresAdapter` |
-| `EmbeddingPort` | `PgVectorAdapter` |
+| `EmbeddingProviderPort` | `GeminiEmbeddingAdapter` (default) / `OpenAIEmbeddingAdapter` / `LocalEmbeddingAdapter` |
+| `EmbeddingStorePort` | `PgVectorAdapter` |
 | `GraphStorePort` | `FalkorDBAdapter` |
 | `ToolPort` | `MCPBridgeAdapter` |
 | `GraphOrchestrationPort` | `LangGraphAdapter` |
@@ -835,10 +891,215 @@ message AgentResponse {
 
 - **RedisAdapter** → implements `MemoryPort`: conversation cache, session hot state, pub/sub
 - **PostgresAdapter** → implements `SessionPort`: sessions, checkpoints, audit log
-- **PgVectorAdapter** → implements `EmbeddingPort`: semantic search, RAG embeddings
+- **PgVectorAdapter** → implements `EmbeddingStorePort`: vector storage + similarity search in pgvector
 - **FalkorDBAdapter** → implements `GraphStorePort`: knowledge graph, entity relations
 
-### 8.2 Tool Adapters
+### 8.2 Embedding Providers
+
+```mermaid
+graph TB
+    subgraph PROVIDERS["Embedding Providers (EmbeddingProviderPort)"]
+        GEMINI["GeminiEmbeddingAdapter<br/><b>gemini-embedding-2-preview</b><br/><i>Default. Multimodal.</i>"]
+        OPENAI["OpenAIEmbeddingAdapter<br/><b>text-embedding-3-large</b><br/><i>Text only.</i>"]
+        LOCAL["LocalEmbeddingAdapter<br/><b>sentence-transformers</b><br/><i>Offline. Text only.</i>"]
+    end
+
+    subgraph PIPELINE["RAG Pipeline"]
+        INGEST["Ingest"]
+        CHUNK["Chunk"]
+        EMBED["Embed"]
+        STORE["Store"]
+        RETRIEVE["Retrieve"]
+        RERANK["Rerank"]
+    end
+
+    subgraph STORAGE["EmbeddingStorePort"]
+        PGV["pgvector<br/>(PostgreSQL)"]
+    end
+
+    PROVIDERS -->|"embed_text / embed_multimodal"| EMBED
+    INGEST --> CHUNK --> EMBED --> STORE
+    STORE --> PGV
+    PGV --> RETRIEVE --> RERANK
+
+    style GEMINI fill:#4285F4,color:#fff
+    style OPENAI fill:#10A37F,color:#fff
+    style LOCAL fill:#95A5A6,color:#fff
+```
+
+#### GeminiEmbeddingAdapter (Default)
+
+```python
+class GeminiEmbeddingAdapter(EmbeddingProviderPort):
+    """Gemini Embedding 2 — natively multimodal embeddings.
+    Maps text, images, video, audio, and PDFs into a unified vector space."""
+
+    # Model: gemini-embedding-2-preview
+    # Dimensions: 128 to 3072 (Matryoshka), default 3072
+    # Max input: 8192 tokens across all modalities
+    # Languages: 100+
+    # Task types: all EmbeddingTaskType variants supported
+
+    def __init__(self, settings: EmbeddingProviderSettings):
+        self._client = genai.Client(api_key=settings.gemini_api_key)
+        self._model = settings.gemini_embedding_model  # "gemini-embedding-2-preview"
+        self._default_dimensions = settings.embedding_dimensions  # 768 recommended for cost/quality
+
+    async def embed_text(self, text: str, task_type: EmbeddingTaskType | None = None,
+                         dimensions: int | None = None) -> list[float]:
+        result = await self._client.models.embed_content(
+            model=self._model,
+            contents=text,
+            config=EmbedContentConfig(
+                task_type=task_type.value if task_type else "RETRIEVAL_DOCUMENT",
+                output_dimensionality=dimensions or self._default_dimensions,
+            ),
+        )
+        return result.embeddings[0].values
+
+    async def embed_multimodal(self, content: MultimodalContent,
+                                task_type: EmbeddingTaskType | None = None,
+                                dimensions: int | None = None) -> list[float]:
+        """Embed mixed content: text + images + audio + video + PDF.
+        All modalities map to the SAME vector space — enabling cross-modal search."""
+        parts = self._build_parts(content)  # Convert to Gemini Part objects
+        result = await self._client.models.embed_content(
+            model=self._model,
+            contents=parts,
+            config=EmbedContentConfig(
+                task_type=task_type.value if task_type else "RETRIEVAL_DOCUMENT",
+                output_dimensionality=dimensions or self._default_dimensions,
+            ),
+        )
+        return result.embeddings[0].values
+
+    @property
+    def supported_modalities(self) -> list[str]:
+        return ["text", "image", "audio", "video", "pdf"]
+
+    @property
+    def max_dimensions(self) -> int:
+        return 3072
+
+    @property
+    def default_dimensions(self) -> int:
+        return self._default_dimensions
+```
+
+#### Matryoshka Dimension Strategy
+
+Gemini Embedding uses Matryoshka Representation Learning — the first N dimensions of a 3072-d vector are a valid N-dimensional embedding. This enables:
+
+| Dimensions | Use case | Storage per 1M vectors | Quality |
+|-----------|---------|----------------------|---------|
+| 3072 | Maximum quality (benchmarks, offline analysis) | ~11.5 GB | Best |
+| 1536 | Balanced (production RAG) | ~5.8 GB | Very good |
+| 768 | **Recommended default** (cost/quality sweet spot) | ~2.9 GB | Good |
+| 256 | Lightweight (mobile, edge, high-volume filtering) | ~0.97 GB | Acceptable |
+| 128 | Ultra-compact (pre-filtering, clustering) | ~0.49 GB | Minimum viable |
+
+The library defaults to **768 dimensions** for production use. Consumers can override per persona in YAML:
+
+```yaml
+# agents/research-agent.yaml
+embedding_config:
+  provider: gemini          # gemini | openai | local
+  model: gemini-embedding-2-preview
+  dimensions: 1536          # Override: higher quality for research tasks
+  task_type: RETRIEVAL_DOCUMENT
+```
+
+#### MultimodalContent Value Object
+
+```python
+class MultimodalContent(BaseModel):
+    """Content that can contain multiple modalities for embedding."""
+    text: str | None = None
+    images: list[bytes] = []          # PNG/JPEG, max 6 per request
+    audio: bytes | None = None        # MP3/WAV, max 80 seconds
+    video: bytes | None = None        # MP4/MOV, max 120 seconds
+    pdf: bytes | None = None          # Max 6 pages
+```
+
+#### RAG Pipeline (modular)
+
+```python
+class RAGPipeline:
+    """Configurable pipeline: ingest -> chunk -> embed -> store -> retrieve -> rerank.
+    Provider-agnostic: works with any EmbeddingProviderPort implementation."""
+
+    def __init__(self, embedding_provider: EmbeddingProviderPort,
+                 embedding_store: EmbeddingStorePort):
+        self._provider = embedding_provider
+        self._store = embedding_store
+
+    async def ingest(self, documents: list[Document],
+                     task_type: EmbeddingTaskType = EmbeddingTaskType.RETRIEVAL_DOCUMENT) -> int:
+        """Chunk documents -> generate embeddings -> store in pgvector.
+        Returns number of chunks stored."""
+        chunks = self._chunk(documents)
+        embeddings = await self._provider.embed_batch(
+            [c.text for c in chunks], task_type=task_type
+        )
+        for chunk, embedding in zip(chunks, embeddings):
+            await self._store.store(embedding, metadata=chunk.metadata)
+        return len(chunks)
+
+    async def retrieve(self, query: str, top_k: int = 5,
+                       task_type: EmbeddingTaskType = EmbeddingTaskType.RETRIEVAL_QUERY) -> list[RetrievedChunk]:
+        """Embed query -> search pgvector -> return ranked chunks."""
+        query_embedding = await self._provider.embed_text(query, task_type=task_type)
+        return await self._store.search(query_embedding, top_k=top_k)
+
+    async def retrieve_multimodal(self, content: MultimodalContent,
+                                   top_k: int = 5) -> list[RetrievedChunk]:
+        """Cross-modal search: query with image/audio/video, find text (or vice versa).
+        Only works with multimodal providers (Gemini Embedding)."""
+        if "image" not in self._provider.supported_modalities:
+            raise UnsupportedModalityError(f"Provider does not support multimodal search")
+        query_embedding = await self._provider.embed_multimodal(content)
+        return await self._store.search(query_embedding, top_k=top_k)
+```
+
+#### Cross-Modal Search Example
+
+Because Gemini Embedding maps all modalities to the same vector space:
+
+```python
+# Ingest a product catalog with images
+await rag.ingest([
+    Document(text="Red running shoes, Nike Air Max", image=shoe_image_bytes),
+    Document(text="Blue denim jacket, Levi's", image=jacket_image_bytes),
+])
+
+# Query with text → finds matching images
+results = await rag.retrieve("comfortable running shoes")
+
+# Query with image → finds matching text descriptions
+results = await rag.retrieve_multimodal(MultimodalContent(images=[photo_of_shoes]))
+
+# Query with audio → finds matching documents (voice search)
+results = await rag.retrieve_multimodal(MultimodalContent(audio=voice_query_bytes))
+```
+
+#### Embedding Provider Configuration
+
+```python
+class EmbeddingProviderSettings(BaseModel):
+    provider: Literal["gemini", "openai", "local"] = "gemini"
+    gemini_api_key: str | None = None
+    gemini_embedding_model: str = "gemini-embedding-2-preview"
+    openai_api_key: str | None = None
+    openai_embedding_model: str = "text-embedding-3-large"
+    local_model_name: str = "all-MiniLM-L6-v2"  # sentence-transformers
+    embedding_dimensions: int = 768               # Matryoshka default
+```
+
+#### Provider Incompatibility Warning
+
+Embedding spaces between different providers (and even different model versions within the same provider) are **incompatible**. Switching providers or upgrading model versions requires re-embedding all stored vectors. The RAG pipeline logs a `WARNING` if the configured provider differs from the one that generated stored vectors (tracked in embedding metadata).
+
+### 8.3 Tool Adapters
 
 - **MCPBridgeAdapter** → implements `ToolPort`: discovers MCP servers (stdio/SSE/streamable-http), registers tools with `mcp_{server}_{tool}` naming, safe env resolution, error sanitization
 - **LangGraphAdapter** → implements `GraphOrchestrationPort`: graph compilation, checkpoint management, graph template instantiation, streaming execution
@@ -1712,6 +1973,7 @@ all = [
     "opentelemetry-instrumentation-grpc>=0.45",
     "langfuse>=2.0",
     "httpx>=0.27",
+    "google-genai>=1.0",
     "presidio-analyzer>=2.2",
     "mcp>=1.0",
 ]
