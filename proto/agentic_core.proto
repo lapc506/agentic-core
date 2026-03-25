@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package agentic_core;
+
+service AgentService {
+  rpc SendMessage(AgentRequest) returns (stream AgentResponse);
+  rpc CreateSession(CreateSessionRequest) returns (SessionInfo);
+  rpc GetSession(GetSessionRequest) returns (SessionInfo);
+  rpc ResumeHITL(HumanResponse) returns (stream AgentResponse);
+  rpc ListPersonas(Empty) returns (PersonaList);
+  rpc HealthCheck(Empty) returns (HealthStatus);
+}
+
+message Empty {}
+
+message AgentRequest {
+  string session_id = 1;
+  string persona_id = 2;
+  string content = 3;
+  string user_id = 4;
+  string trace_id = 5;
+}
+
+message CreateSessionRequest {
+  string persona_id = 1;
+  string user_id = 2;
+}
+
+message GetSessionRequest {
+  string session_id = 1;
+}
+
+message HumanResponse {
+  string session_id = 1;
+  string content = 2;
+}
+
+message SessionInfo {
+  string session_id = 1;
+  string persona_id = 2;
+  string user_id = 3;
+  string state = 4;
+  string created_at = 5;
+}
+
+message PersonaList {
+  repeated PersonaInfo personas = 1;
+}
+
+message PersonaInfo {
+  string name = 1;
+  string role = 2;
+  string description = 3;
+  string graph_template = 4;
+}
+
+message HealthStatus {
+  bool healthy = 1;
+  string version = 2;
+  int32 active_sessions = 3;
+}
+
+message AgentResponse {
+  oneof payload {
+    StreamToken token = 1;
+    StreamEnd end = 2;
+    HumanEscalation escalation = 3;
+    AudioChunk audio = 4;
+    ErrorDetail error = 5;
+  }
+}
+
+message StreamToken {
+  string session_id = 1;
+  string token = 2;
+}
+
+message StreamEnd {
+  string session_id = 1;
+}
+
+message HumanEscalation {
+  string session_id = 1;
+  string prompt = 2;
+}
+
+message AudioChunk {
+  string session_id = 1;
+  bytes data = 2;
+}
+
+message ErrorDetail {
+  string session_id = 1;
+  string code = 2;
+  string message = 3;
+}
