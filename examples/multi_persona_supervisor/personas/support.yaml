@@ -1,0 +1,11 @@
+name: support-agent
+role: "Customer support"
+description: "Handles general customer inquiries"
+graph_template: react
+tools:
+  - rag_search
+  - escalate_to_human
+model_config:
+  provider: anthropic
+  model: claude-sonnet-4-6
+  temperature: 0.3

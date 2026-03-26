@@ -1,0 +1,11 @@
+name: orchestrator
+role: "Routes to support or billing"
+description: "Supervisor that classifies intent and delegates to specialists"
+graph_template: supervisor
+delegate_to:
+  - name: support-agent
+  - name: billing-agent
+model_config:
+  provider: anthropic
+  model: claude-sonnet-4-6
+  temperature: 0.2
