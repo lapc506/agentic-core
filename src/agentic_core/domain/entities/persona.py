@@ -8,6 +8,7 @@ from agentic_core.domain.value_objects.model_config import ModelConfig
 from agentic_core.domain.value_objects.slo import SLOTargets
 
 if TYPE_CHECKING:
+    from agentic_core.application.services.context_loader import PersonalityConfig
     from agentic_core.graph_templates.base import BaseAgentGraph
 
 
@@ -55,6 +56,7 @@ class Persona:
     slo_targets: SLOTargets | None = None
     delegate_to: list[DelegateConfig] = field(default_factory=list)
     graph_cls: type[BaseAgentGraph] | None = None
+    personality: PersonalityConfig | None = None
 
     def get_delegate_model_config(self, delegate_name: str) -> ModelConfig | None:
         for d in self.delegate_to:
