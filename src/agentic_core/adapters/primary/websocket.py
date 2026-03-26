@@ -111,12 +111,20 @@ class WebSocketTransport:
                     await self._send_error(
                         ws, data.get("session_id"), ERR_INTERNAL, "Internal server error"
                     )
-        except websockets.ConnectionClosed:
-            pass
+        except websockets.ConnectionClosed as e:
+            # #49: Handle 1006/1008 close codes gracefully
+            code = e.rcvd.code if e.rcvd else 0
+            reason = e.rcvd.reason if e.rcvd else "unknown"
+            logger.info("WebSocket closed: code=%d reason=%s sessions=%d", code, reason, len(state.sessions))
         finally:
-            # Connection dropped: pause all sessions
+            # Connection dropped: pause all sessions (checkpoints preserved)
             for sid in state.sessions:
                 logger.info("Connection dropped, pausing session %s", sid)
+                if self.on_close_session is not None:
+                    try:
+                        await self.on_close_session(sid)
+                    except Exception:
+                        logger.exception("Failed to pause session %s on disconnect", sid)
 
     async def _dispatch(
         self, ws: ServerConnection, state: ConnectionState,
