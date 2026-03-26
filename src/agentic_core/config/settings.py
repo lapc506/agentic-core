@@ -8,6 +8,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from agentic_core.domain.value_objects.model_config import ModelConfig
 
 
+class MCPToolFilter(BaseModel):
+    """Per-server tool filtering: include/exclude lists + prompt/resource toggles."""
+    include: list[str] = []
+    exclude: list[str] = []
+    prompts: bool = True
+    resources: bool = True
+
+
 class MCPServerEntry(BaseModel):
     transport: Literal["stdio", "sse", "streamable-http"]
     command: str | None = None
@@ -17,6 +25,7 @@ class MCPServerEntry(BaseModel):
     env: dict[str, str] = {}
     description: str = ""
     keywords: list[str] = []
+    tools: MCPToolFilter = MCPToolFilter()
 
 
 class MCPBridgeConfig(BaseModel):
