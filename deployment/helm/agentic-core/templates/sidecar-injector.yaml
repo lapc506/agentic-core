@@ -1,0 +1,65 @@
+{{- if eq .Values.mode "sidecar" }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ .Release.Name }}-sidecar-injector
+  labels:
+    app: agentic-core
+webhooks:
+  - name: sidecar.agentic-core.io
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    clientConfig:
+      service:
+        name: {{ .Release.Name }}-injector
+        namespace: {{ .Release.Namespace }}
+        path: /inject
+    rules:
+      - operations: ["CREATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+    objectSelector:
+      matchLabels:
+        agentic-core.io/inject: "true"
+    failurePolicy: Ignore
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-sidecar-template
+  labels:
+    app: agentic-core
+data:
+  sidecar.yaml: |
+    containers:
+      - name: agentic-core
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        ports:
+          - name: websocket
+            containerPort: {{ .Values.service.websocket.port }}
+          - name: grpc
+            containerPort: {{ .Values.service.grpc.port }}
+          - name: metrics
+            containerPort: {{ .Values.service.metrics.port }}
+        env:
+          - name: AGENTIC_MODE
+            value: "sidecar"
+          - name: AGENTIC_WS_HOST
+            value: "127.0.0.1"
+          - name: AGENTIC_GRPC_HOST
+            value: "127.0.0.1"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+{{- end }}

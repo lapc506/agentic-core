@@ -1,0 +1,19 @@
+mode: sidecar
+
+replicaCount: 1
+
+env:
+  AGENTIC_MODE: sidecar
+  AGENTIC_WS_HOST: "127.0.0.1"
+  AGENTIC_GRPC_HOST: "127.0.0.1"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: false
