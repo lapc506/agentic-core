@@ -1,0 +1,67 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Release.Name }}-agentic-core
+  labels:
+    app: agentic-core
+spec:
+  groups:
+    - name: agentic-core.rules
+      rules:
+        - alert: AgentHighErrorRate
+          expr: |
+            sum(rate(agent_errors_total[5m])) by (persona_id)
+            / sum(rate(agent_requests_total[5m])) by (persona_id)
+            > 0.05
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Agent {{ "{{" }} $labels.persona_id {{ "}}" }} error rate > 5%"
+            runbook_url: "https://github.com/lapc506/agentic-core/blob/main/docs/runbooks/high-error-rate.md"
+
+        - alert: AgentHighLatencyP99
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(agent_request_duration_seconds_bucket[5m])) by (le, persona_id)
+            ) > 5
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Agent {{ "{{" }} $labels.persona_id {{ "}}" }} p99 latency > 5s"
+
+        - alert: AgentErrorBudgetBurnRate
+          expr: agent_error_budget_remaining_ratio < 0.25
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Agent {{ "{{" }} $labels.persona_id {{ "}}" }} error budget < 25%"
+
+        - alert: MCPServerDown
+          expr: agent_mcp_server_status == 0
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "MCP server {{ "{{" }} $labels.server_name {{ "}}" }} is down"
+
+        - alert: AgentSessionSpike
+          expr: agent_active_sessions > 500
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Active sessions > 500, possible abuse or leak"
+
+        - alert: AgentHighEscalationRate
+          expr: |
+            sum(rate(agent_hitl_escalations_total[15m])) by (persona_id)
+            / sum(rate(agent_requests_total[15m])) by (persona_id)
+            > 0.3
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Agent {{ "{{" }} $labels.persona_id {{ "}}" }} escalation rate > 30%"
