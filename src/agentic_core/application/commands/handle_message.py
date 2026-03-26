@@ -41,4 +41,4 @@ class HandleMessageHandler:
         # Phase 2: will invoke LangGraph here and stream tokens
         # For now, yield nothing (skeleton)
         return
-        yield  # type: ignore[misc]  # makes this an async generator
+        yield  # noqa: unreachable — makes this an async generator

@@ -124,7 +124,7 @@ class GrpcTransport:
 
     async def start(self) -> None:
         self._server = grpc_aio.server()
-        agentic_core_pb2_grpc.add_AgentServiceServicer_to_server(
+        agentic_core_pb2_grpc.add_AgentServiceServicer_to_server(  # type: ignore[no-untyped-call]
             self.servicer, self._server
         )
         bind_address = f"{self._host}:{self._port}"

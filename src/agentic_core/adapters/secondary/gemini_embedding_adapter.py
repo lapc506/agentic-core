@@ -41,7 +41,7 @@ class GeminiEmbeddingAdapter(EmbeddingProviderPort):
             contents=text,
             config=config,
         )
-        return result.embeddings[0].values
+        return list(result.embeddings[0].values)
 
     async def embed_batch(
         self, texts: list[str], task_type: EmbeddingTaskType | None = None,
@@ -77,7 +77,7 @@ class GeminiEmbeddingAdapter(EmbeddingProviderPort):
             contents=parts,
             config=config,
         )
-        return result.embeddings[0].values
+        return list(result.embeddings[0].values)
 
     @property
     def supported_modalities(self) -> list[str]:

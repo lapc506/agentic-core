@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 
 import yaml
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 _GRAPH_REGISTRY: dict[str, type[BaseAgentGraph]] = {}
 
 
-def agent_persona(persona_name: str):
+def agent_persona(persona_name: str) -> Callable[[type[BaseAgentGraph]], type[BaseAgentGraph]]:
     """Decorator to register a graph class for a persona.
     The class overrides the YAML graph_template when present."""
 
