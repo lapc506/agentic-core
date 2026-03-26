@@ -6,7 +6,7 @@ import os
 from typing import Any
 
 from agentic_core.application.ports.tool import ToolPort
-from agentic_core.config.settings import MCPBridgeConfig, MCPServerEntry
+from agentic_core.config.settings import MCPBridgeConfig, MCPServerEntry, MCPToolFilter
 from agentic_core.domain.events.domain_events import ToolDegraded, ToolRecovered
 from agentic_core.domain.value_objects.tools import ToolError, ToolHealthStatus, ToolResult
 from agentic_core.shared_kernel.events import EventBus
@@ -108,6 +108,26 @@ class MCPServerConnection:
         return self._connected
 
 
+def _passes_tool_filter(tool_name: str, tool_filter: MCPToolFilter) -> bool:
+    """Check if a tool passes the server's include/exclude filter.
+
+    Rules:
+    - If include is non-empty, tool must match at least one include pattern.
+    - If exclude is non-empty, tool must NOT match any exclude pattern.
+    - Exclude takes precedence over include.
+    - Patterns support fnmatch-style globs (e.g. "create_*", "list_*").
+    """
+    from fnmatch import fnmatch
+
+    if tool_filter.exclude and any(fnmatch(tool_name, pat) for pat in tool_filter.exclude):
+        return False
+
+    if tool_filter.include:
+        return any(fnmatch(tool_name, pat) for pat in tool_filter.include)
+
+    return True
+
+
 class MCPBridgeAdapter(ToolPort):
     """Discovers, connects, and manages tools from MCP servers.
 
@@ -129,7 +149,11 @@ class MCPBridgeAdapter(ToolPort):
 
             if server.is_connected:
                 tools = await server.discover_tools()
-                for tool_name, tool_schema in tools.items():
+                filtered_count = 0
+                for tool_name, _tool_schema in tools.items():
+                    if not _passes_tool_filter(tool_name, entry.tools):
+                        filtered_count += 1
+                        continue
                     full_name = f"mcp_{name}_{tool_name}" if self._config.tool_prefix else tool_name
                     health = await self.healthcheck_tool(full_name)
                     if health.healthy:
@@ -137,6 +161,9 @@ class MCPBridgeAdapter(ToolPort):
                         self._healthy_tools.add(full_name)
                     else:
                         logger.warning("Tool '%s' failed healthcheck: %s", full_name, health.reason)
+                if filtered_count:
+                    logger.info("Server '%s': %d tools filtered out by include/exclude rules",
+                                name, filtered_count)
 
         logger.info("MCP bridge started: %d servers, %d tools registered",
                     len(self._servers), len(self._healthy_tools))
