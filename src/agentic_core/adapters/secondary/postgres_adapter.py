@@ -112,4 +112,4 @@ class PostgresAdapter(SessionPort):
             )
             if row is None:
                 raise ValueError(f"Checkpoint {checkpoint_id} not found")
-            return row["data"]
+            return bytes(row["data"])

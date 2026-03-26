@@ -80,7 +80,8 @@ class GSDSequencer:
 
     async def _execute_task(self, task: RoadmapTask, prior_context: str) -> TaskResult:
         if self._executor is not None:
-            return await self._executor(task, prior_context)
+            result: TaskResult = await self._executor(task, prior_context)
+            return result
         # Default: mark as success (skeleton for Phase 3)
         return TaskResult(task_id=task.id, success=True, output=f"Executed: {task.description}")
 

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import AsyncIterator
+from typing import Any
 
 import structlog
 
@@ -24,8 +26,10 @@ from agentic_core.application.middleware.tracing import TracingMiddleware
 from agentic_core.application.queries.get_session import GetSessionHandler, GetSessionQuery
 from agentic_core.application.queries.list_personas import ListPersonasHandler, ListPersonasQuery
 from agentic_core.config.settings import AgenticSettings
+from agentic_core.domain.entities.persona import Persona
 from agentic_core.domain.entities.session import Session
 from agentic_core.domain.services.routing import RoutingService
+from agentic_core.domain.value_objects.messages import AgentMessage
 from agentic_core.shared_kernel.events import EventBus
 
 logger = logging.getLogger(__name__)
@@ -59,10 +63,10 @@ class _StubMemoryPort:
     async def store_message(self, message: object) -> None:
         pass
 
-    async def get_messages(self, session_id: str, limit: int = 50) -> list:
+    async def get_messages(self, session_id: str, limit: int = 50) -> list[AgentMessage]:
         return []
 
-    async def get_context_window(self, session_id: str, max_tokens: int) -> list:
+    async def get_context_window(self, session_id: str, max_tokens: int) -> list[AgentMessage]:
         return []
 
 
@@ -122,7 +126,7 @@ class AgentRuntime:
 
     def _configure_logging(self) -> None:
         log_format = self._settings.observability.log_format
-        processors: list = [
+        processors: list[Any] = [
             structlog.contextvars.merge_contextvars,
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso"),
@@ -138,7 +142,7 @@ class AgentRuntime:
         )
 
     @staticmethod
-    async def _noop_handler(message: object, ctx: RequestContext) -> object:
+    async def _noop_handler(message: AgentMessage, ctx: RequestContext) -> AgentMessage:
         return message
 
     # -- WebSocket callbacks --
@@ -148,10 +152,12 @@ class AgentRuntime:
         session = await self._create_session_handler.execute(cmd)
         return session.id
 
-    async def _on_ws_message(self, session_id: str, persona_id: str, content: str):  # type: ignore[override]
+    async def _on_ws_message(
+        self, session_id: str, persona_id: str, content: str,
+    ) -> AsyncIterator[dict[str, Any]]:
         # Phase 2: will stream tokens from LangGraph
         return
-        yield  # type: ignore[misc]
+        yield  # noqa: unreachable
 
     # -- gRPC callbacks --
 
@@ -162,7 +168,7 @@ class AgentRuntime:
     async def _on_grpc_get_session(self, session_id: str) -> Session | None:
         return await self._get_session_handler.execute(GetSessionQuery(session_id))
 
-    async def _on_grpc_list_personas(self):  # type: ignore[override]
+    async def _on_grpc_list_personas(self) -> list[Persona]:
         return await self._list_personas_handler.execute(ListPersonasQuery())
 
     # -- Lifecycle --

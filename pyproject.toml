@@ -45,6 +45,7 @@ dev = [
     "pytest-cov>=5.0",
     "ruff>=0.8",
     "mypy>=1.13",
+    "types-PyYAML>=6.0",
 ]
 
 [tool.pytest.ini_options]
@@ -56,3 +57,26 @@ python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = [
+    "redis.*",
+    "asyncpg.*",
+    "falkordb.*",
+    "mcp.*",
+    "mcp.client.*",
+    "opentelemetry.*",
+    "langfuse.*",
+    "google.*",
+    "google.genai.*",
+    "grpc.*",
+    "httpx",
+    "httpx.*",
+    "simpleeval.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "agentic_core.adapters.primary.grpc.generated.*"
+ignore_errors = true
