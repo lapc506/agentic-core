@@ -1,0 +1,14 @@
+name: calculator-agent
+role: "Math calculator"
+description: "Simple agent that can do arithmetic using tools"
+graph_template: react
+tools:
+  - add
+  - multiply
+model_config:
+  provider: anthropic
+  model: claude-sonnet-4-6
+  temperature: 0.0
+slo_targets:
+  latency_p99_ms: 3000
+  success_rate: 0.99

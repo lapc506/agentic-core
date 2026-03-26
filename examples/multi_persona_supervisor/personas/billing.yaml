@@ -1,0 +1,11 @@
+name: billing-agent
+role: "Billing specialist"
+description: "Handles billing inquiries, refunds, and payment issues"
+graph_template: react
+tools:
+  - lookup_invoice
+  - process_refund
+model_config:
+  provider: anthropic
+  model: claude-sonnet-4-6
+  temperature: 0.1
