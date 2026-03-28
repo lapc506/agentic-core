@@ -19,6 +19,9 @@ dependencies = [
     "pyyaml>=6.0",
     "uuid-utils>=0.9",
     "simpleeval>=1.0",
+    "langgraph>=0.3",
+    "langchain-core>=0.3",
+    "langchain-anthropic>=0.3",
 ]
 
 [project.optional-dependencies]
@@ -74,6 +77,9 @@ module = [
     "httpx",
     "httpx.*",
     "simpleeval.*",
+    "langgraph.*",
+    "langchain_core.*",
+    "langchain_anthropic.*",
 ]
 ignore_missing_imports = true
 
