@@ -27,6 +27,14 @@ Built on [Explicit Architecture](https://herbertograca.com/2017/11/16/explicit-a
 | **Model Cascading** | Runtime → Persona → Sub-agent inheritance with per-level override |
 | **SRE Observability** | OpenTelemetry + Prometheus + Loki + Tempo + Grafana + Langfuse + Alertmanager |
 | **Kubernetes-Native** | Standalone or sidecar deployment via a single Helm chart |
+| **GenUI** | Dynamic UI rendering via the A2A protocol — Flutter surfaces adapt to agent state in real time |
+| **A2A Protocol** | Google A2A spec: JSON-RPC 2.0 over HTTP for agent discovery, task delegation, and streaming between agents |
+| **Go TUI (20 Ralph Patterns)** | Keyboard-driven terminal client with autonomous execution loop, parallel worktrees, headless CI mode, and remote management |
+| **Platform Gateway** | Normalised inbound/outbound adapters for Telegram, Discord, Slack, WhatsApp, and Signal |
+| **Plugin Architecture** | Manifest-driven lifecycle, skill registry, and hot-loadable agent extensions |
+| **Sandbox Execution** | Isolated code execution environments (Docker, subprocess) with resource limits and result capture |
+| **Programmatic Tools** | Register and call Python functions as agent tools at runtime without MCP server overhead |
+| **Voice Integration** | ElevenLabs WebSocket streaming with PCM audio chunking and real-time transcript bridging |
 
 ---
 
@@ -74,10 +82,11 @@ await runtime.start()  # WebSocket :8765 + gRPC :50051
 
 | Phase | Status |
 |-------|--------|
-| Phase 1: Core + Transport + Runtime | In Progress |
-| Phase 2: Memory + RAG + LangGraph | Planned |
-| Phase 3: Observability + SRE + Meta-Orchestration | Planned |
-| Phase 4: Security + Deployment + Docs | Planned |
+| Phase 1: Core + Transport + Runtime | Complete |
+| Phase 2: Memory + RAG + LangGraph | Complete |
+| Phase 3: Observability + SRE + Meta-Orchestration | Complete |
+| Phase 4: Platform Gateway + Plugins + Sandbox + GenUI + A2A + TUI | Complete |
+| Phase 5: Security + Deployment + Docs | In Progress |
 
 Full technical specification: [docs/superpowers/specs](https://github.com/lapc506/agentic-core/tree/main/docs/superpowers/specs)
 

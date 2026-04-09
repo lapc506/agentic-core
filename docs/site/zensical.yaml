@@ -27,6 +27,7 @@ nav:
     - api/rest.md
     - api/websocket.md
     - api/ollama.md
+    - api/a2a.md
   - Guides:
     - guides/providers.md
     - guides/personas.md
