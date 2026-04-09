@@ -601,31 +601,106 @@ stateDiagram-v2
     Healthy --> Healthy : successful execution
 ```
 
+## Competitive Comparison
+
+How agentic-core compares to the leading AI agent frameworks:
+
+| Capability | agentic-core | ElizaOS | OpenClaw | Hermes Agent |
+|---|:---:|:---:|:---:|:---:|
+| **Agent Orchestration** | | | | |
+| LangGraph templates (ReAct, Plan-Execute, Reflexion, Supervisor) | :white_check_mark: | :x: | :x: | :x: |
+| HTN hierarchical task planning | :white_check_mark: | :white_check_mark: | :x: | :x: |
+| Multi-persona routing (channel + keyword) | :white_check_mark: | :x: | :white_check_mark: | :x: |
+| A2A Protocol (agent-to-agent) | :white_check_mark: | :x: | :x: | :x: |
+| **Memory** | | | | |
+| Semantic memory (fact extraction + dedup) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Procedural memory (skill self-creation) | :white_check_mark: | :x: | :x: | :white_check_mark: |
+| Graph memory (entities + relationships) | :white_check_mark: | :x: | :white_check_mark: | :x: |
+| Dual-layer hot/cold (async writes) | :white_check_mark: | :x: | :x: | :white_check_mark: |
+| **Safety & Guardrails** | | | | |
+| Evaluators/Gates (post-response checks) | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: |
+| LLM Judge (observe/enforce modes) | :white_check_mark: | :x: | :white_check_mark: | :x: |
+| Boundaries deny list (SOUL.md) | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: |
+| PII redaction middleware | :white_check_mark: | :x: | :white_check_mark: | :x: |
+| Progressive deployment gates (dev/staging/prod) | :white_check_mark: | :x: | :x: | :x: |
+| Security audit command | :white_check_mark: | :x: | :white_check_mark: | :x: |
+| Iteration budget + stuck detection | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: |
+| **Evaluation** | | | | |
+| Trajectory scoring (pass@k) | :white_check_mark: | :x: | :x: | :white_check_mark: |
+| SLO tracking + error budgets | :white_check_mark: | :x: | :x: | :x: |
+| **Tool Integration** | | | | |
+| MCP Bridge (stdio + HTTP) | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: |
+| MCP OAuth 2.1 + server discovery | :white_check_mark: | :x: | :x: | :white_check_mark: |
+| Phantom tool prevention | :white_check_mark: | :x: | :x: | :x: |
+| **Multi-Provider LLM** | | | | |
+| OpenRouter, Ollama, LMStudio, Fireworks, NVIDIA NIM | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Ollama-compatible API (be a provider) | :white_check_mark: | :x: | :white_check_mark: | :x: |
+| Model cascading (runtime/persona/sub-agent) | :white_check_mark: | :x: | :x: | :white_check_mark: |
+| **Lifecycle Hooks** | | | | |
+| Event-based hook pipeline (6 events) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| **Interfaces** | | | | |
+| Flutter Web UI (Agent Studio) | :white_check_mark: | :x: | :x: | :x: |
+| Go TUI (Bubble Tea) | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: |
+| REST API | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
+| WebSocket streaming | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
+| gRPC (sidecar) | :white_check_mark: | :x: | :x: | :x: |
+| **Deployment** | | | | |
+| Docker standalone (`docker compose up`) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Kubernetes (Helm, sidecar injection) | :white_check_mark: | :x: | :x: | :x: |
+| Graph DB graceful degradation | :white_check_mark: | :x: | :x: | :x: |
+| **Configuration** | | | | |
+| Visual agent editor (WYSIWYG gates) | :white_check_mark: | :x: | :x: | :x: |
+| SOUL.md (agent personality file) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Character files (bio, lore, style) | :white_check_mark: | :white_check_mark: | :x: | :x: |
+| Onboarding wizard | :white_check_mark: | :x: | :white_check_mark: | :x: |
+| **Documentation** | | | | |
+| Zensical docs site | :white_check_mark: | :x: | :white_check_mark: | :x: |
+| MyST technical specs | :white_check_mark: | :x: | :x: | :x: |
+| OpenSpec change management | :white_check_mark: | :x: | :x: | :x: |
+
+**Key differentiators:**
+- Only framework with **visual agent editor** (Flutter Web UI with WYSIWYG gate editing)
+- Only framework with **LangGraph integration** (6 graph templates, not just ReAct)
+- Only framework with **A2A Protocol** for agent-to-agent interoperability
+- Only framework with **Kubernetes-native sidecar deployment** alongside standalone Docker
+- Only framework with both **Flutter Web UI and Go TUI** interfaces
+
 ## Project Status
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| Phase 1: Core + Transport + Runtime | **In Progress** | Shared kernel, domain, ports, WebSocket, gRPC, config |
-| Phase 2: Memory + RAG + LangGraph | Planned | Redis, PG, pgvector, FalkorDB adapters, graph templates, Gemini Embedding |
-| Phase 3: Observability + SRE + Meta-Orchestration | Planned | OTel, Langfuse, SLO tracking, chaos hooks, GSD, Auto Research |
-| Phase 4: Security + Deployment + Docs | Planned | Auth, rate limit, PII, Helm, ArgoCD, Terraform, k6 load tests |
+| Phase 1: Core + Transport + Runtime | **Complete** | Shared kernel, domain, ports, WebSocket, gRPC, HTTP API, config |
+| Phase 2: Memory + Intelligence | **Complete** | Semantic, procedural, graph, dual-layer memory. HTN planning. Trajectory scoring |
+| Phase 3: Safety + Ops | **Complete** | Evaluators, LLM Judge, PII, gates, security audit, iteration budget, MCP OAuth |
+| Phase 4: Interfaces + Deployment | **Complete** | Flutter Web UI, Go TUI, Ollama API, A2A, Docker, Helm, Zensical docs |
 
 ## Full Spec
 
 The complete design specification (1800+ lines, 13 Mermaid diagrams) is at [`docs/superpowers/specs/2026-03-25-agentic-core-phase1-design.md`](docs/superpowers/specs/2026-03-25-agentic-core-phase1-design.md).
 
+## Documentation
+
+- **Project docs**: `docs/site/` (Zensical) — guides, API reference, architecture
+- **Technical specs**: `docs/specs/` (MyST) — design specifications, implementation plans
+
+```bash
+make docs       # Build both doc sites
+make docs-site  # Zensical only
+make docs-specs # MyST only
+```
+
 ## Contributing
 
-Open-source MIT project. See [GitHub Issues](https://github.com/lapc506/agentic-core/issues) for current tasks.
+See [GitHub Issues](https://github.com/lapc506/agentic-core/issues) for current tasks.
 
 ```bash
 git clone https://github.com/lapc506/agentic-core.git
 cd agentic-core
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-pytest -v  # 67 tests passing
+pytest -v  # 250+ tests passing
 ```
 
 ## License
 
-MIT
+BSL 1.1
