@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'theme/agent_studio_theme.dart';
 
-void main() {
-  runApp(const AgentStudioApp());
-}
+void main() => runApp(const AgentStudioApp());
 
 class AgentStudioApp extends StatelessWidget {
   const AgentStudioApp({super.key});
@@ -12,20 +11,10 @@ class AgentStudioApp extends StatelessWidget {
     return MaterialApp(
       title: 'Agent Studio',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark(useMaterial3: true).copyWith(
-        scaffoldBackgroundColor: const Color(0xFF12121E),
-        colorScheme: ColorScheme.dark(
-          primary: const Color(0xFF3B6FE0),
-          surface: const Color(0xFF1A1A2E),
-        ),
-      ),
+      theme: AgentStudioTheme.darkTheme,
       home: const Scaffold(
         body: Center(
-          child: Text(
-            'Agent Studio\nBackend running — UI coming in Plan 2',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 18, color: Color(0xFFE0E0F0)),
-          ),
+          child: Text('Agent Studio', style: TextStyle(fontSize: 18)),
         ),
       ),
     );
