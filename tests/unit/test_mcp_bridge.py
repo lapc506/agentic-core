@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from agentic_core.adapters.secondary.mcp_bridge_adapter import (
     MCPBridgeAdapter,
+    MCPTool,
     _build_safe_env,
     _passes_tool_filter,
     _sanitize_error,
@@ -70,7 +71,9 @@ async def test_mcp_bridge_deregister_publishes_event():
 
     config = MCPBridgeConfig()
     adapter = MCPBridgeAdapter(config, bus)
-    adapter._tool_registry["mcp_test_tool"] = "test_server"
+    tool = MCPTool(name="test_tool", description="test", server_name="test_server")
+    adapter._tool_registry["mcp_test_tool"] = tool
+    adapter._tool_to_server["mcp_test_tool"] = "test_server"
     adapter._healthy_tools.add("mcp_test_tool")
 
     await adapter._handle_degradation("mcp_test_tool", "server crashed")
