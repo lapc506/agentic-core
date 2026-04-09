@@ -1,6 +1,6 @@
-import pytest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
+import pytest
 import uuid_utils
 
 from agentic_core.domain.value_objects.messages import AgentMessage
@@ -14,7 +14,7 @@ def _make_msg(**overrides: object) -> AgentMessage:
         "role": "user",
         "content": "hello",
         "metadata": {"key": "val"},
-        "timestamp": datetime.now(timezone.utc),
+        "timestamp": datetime.now(UTC),
     }
     defaults.update(overrides)
     return AgentMessage(**defaults)

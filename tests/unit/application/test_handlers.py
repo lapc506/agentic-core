@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import pytest
-from datetime import datetime, timezone
 from typing import Any
 from unittest.mock import AsyncMock
+
+import pytest
 
 from agentic_core.application.commands.create_session import (
     CreateSessionCommand,
@@ -30,7 +30,6 @@ from agentic_core.domain.entities.session import Session
 from agentic_core.domain.enums import SessionState
 from agentic_core.domain.services.routing import RoutingService
 from agentic_core.shared_kernel.events import EventBus
-
 
 # -- CreateSession --
 

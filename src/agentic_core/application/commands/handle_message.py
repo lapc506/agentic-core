@@ -7,16 +7,19 @@ graph template, compiles it, and streams execution events back as
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 
 import uuid_utils
 
-from agentic_core.application.ports.memory import MemoryPort
-from agentic_core.application.ports.session import SessionPort
 from agentic_core.domain.value_objects.messages import AgentMessage
-from agentic_core.shared_kernel.events import EventBus
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from agentic_core.application.ports.memory import MemoryPort
+    from agentic_core.application.ports.session import SessionPort
+    from agentic_core.shared_kernel.events import EventBus
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +86,7 @@ class HandleMessageHandler:
             role="user",
             content=cmd.content,
             metadata={},
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             trace_id=cmd.trace_id,
         )
         await self._memory.store_message(user_msg)
@@ -143,7 +146,7 @@ class HandleMessageHandler:
                                 "stream_token": True,
                                 "node": metadata.get("langgraph_node", ""),
                             },
-                            timestamp=datetime.now(timezone.utc),
+                            timestamp=datetime.now(UTC),
                             trace_id=cmd.trace_id,
                         )
                         yield token_msg
@@ -169,6 +172,6 @@ class HandleMessageHandler:
                                 "stream_token": False,
                                 "node": node_name,
                             },
-                            timestamp=datetime.now(timezone.utc),
+                            timestamp=datetime.now(UTC),
                             trace_id=cmd.trace_id,
                         )

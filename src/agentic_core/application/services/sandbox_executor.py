@@ -4,22 +4,20 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import tempfile
 from dataclasses import dataclass, field
-from enum import Enum
-from pathlib import Path
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class SandboxBackend(str, Enum):
+class SandboxBackend(StrEnum):
     LOCAL = "local"  # No isolation (development only)
     DOCKER = "docker"  # Docker container
     PODMAN = "podman"  # Podman container (rootless)
 
 
-class SandboxPermission(str, Enum):
+class SandboxPermission(StrEnum):
     READ_FILESYSTEM = "read_filesystem"
     WRITE_FILESYSTEM = "write_filesystem"
     NETWORK_EGRESS = "network_egress"
@@ -130,7 +128,7 @@ class SandboxExecutor:
                     stderr=stderr.decode()[-2000:],
                     exit_code=proc.returncode or 0,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 proc.kill()
                 return SandboxResult(
                     exit_code=-1,
@@ -194,7 +192,7 @@ class SandboxExecutor:
                 stderr=stderr.decode()[-2000:],
                 exit_code=proc.returncode or 0,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return SandboxResult(exit_code=-1, timed_out=True)
         except FileNotFoundError:
             return SandboxResult(exit_code=1, stderr=f"{runtime} not found")

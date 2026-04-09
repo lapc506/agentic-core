@@ -3,30 +3,26 @@ deployment gates, security audit, and iteration budget."""
 
 from __future__ import annotations
 
-import pytest
-
-from agentic_core.graph_templates.htn_planner import (
-    HTNPlanner,
-    TaskNode,
-    TaskStatus,
-)
-from agentic_core.domain.services.trajectory_evaluator import (
-    TrajectoryEvaluator,
-    TrajectoryStep,
-)
 from agentic_core.application.services.deployment_gates import (
     DeploymentGateService,
     Stage,
-)
-from agentic_core.application.services.security_auditor import (
-    SecurityAuditor,
-    Severity,
 )
 from agentic_core.application.services.iteration_budget import (
     BudgetStatus,
     IterationBudget,
 )
-
+from agentic_core.application.services.security_auditor import (
+    SecurityAuditor,
+    Severity,
+)
+from agentic_core.domain.services.trajectory_evaluator import (
+    TrajectoryEvaluator,
+    TrajectoryStep,
+)
+from agentic_core.graph_templates.htn_planner import (
+    HTNPlanner,
+    TaskStatus,
+)
 
 # ---------------------------------------------------------------------------
 # HTN Planner
@@ -73,7 +69,7 @@ def test_htn_dependency_resolution_blocks_task() -> None:
     )
     # task-2 is "First", task-3 is "Second"
     first = root.children[0]
-    second = root.children[1]
+    root.children[1]
 
     # Before completing First, only First should be ready
     ready = planner.get_ready_tasks(root)

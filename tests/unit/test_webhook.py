@@ -4,13 +4,11 @@ import hashlib
 import hmac
 
 from agentic_core.adapters.primary.webhook import (
-    WebhookResult,
     WebhookRoute,
     WebhookRouter,
     render_template,
     verify_signature,
 )
-
 
 # --- verify_signature ---
 

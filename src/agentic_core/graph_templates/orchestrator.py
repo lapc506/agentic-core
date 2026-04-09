@@ -23,7 +23,7 @@ class OrchestratorState(TypedDict, total=False):
 class OrchestratorGraphTemplate(BaseAgentGraph):
     def build_graph(self) -> Any:
         try:
-            from langgraph.graph import StateGraph, END
+            from langgraph.graph import END, StateGraph
 
             graph = StateGraph(OrchestratorState)
             graph.add_node("analyze", self._analyze)

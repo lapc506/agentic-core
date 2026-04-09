@@ -6,7 +6,6 @@ import pytest
 
 from agentic_core.application.hooks import HookEvent, HookRunner
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import os
-
 import pytest
 
-from agentic_core.adapters.primary.http_api import create_app, _get_allowed_origins
+from agentic_core.adapters.primary.http_api import _get_allowed_origins, create_app
 
 
 @pytest.fixture

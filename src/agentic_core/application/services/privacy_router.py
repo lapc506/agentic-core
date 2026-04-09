@@ -4,19 +4,19 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 
 
-class DataSensitivity(str, Enum):
+class DataSensitivity(StrEnum):
     PUBLIC = "public"
     INTERNAL = "internal"
     CONFIDENTIAL = "confidential"
     RESTRICTED = "restricted"
 
 
-class RoutingDecision(str, Enum):
+class RoutingDecision(StrEnum):
     LOCAL = "local"  # Process with local model (Ollama, LMStudio)
     CLOUD = "cloud"  # Process with cloud model (OpenRouter, Anthropic)
     BLOCKED = "blocked"  # Do not process

@@ -4,7 +4,6 @@ import pytest
 
 from agentic_core.application.services.persona_router import PersonaRouter, RoutingRule
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

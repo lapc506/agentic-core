@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
-from agentic_core.domain.value_objects.model_config import ModelConfig
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from agentic_core.domain.value_objects.model_config import ModelConfig
 
 
 class ModelResolver:

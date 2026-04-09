@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 from agentic_core.application.services.user_modeling import (
     CommunicationStyle,
     UserModelingService,
     UserPreference,
-    UserProfile,
 )
 
 
@@ -191,7 +188,7 @@ def test_user_preference_frozen() -> None:
     pref = UserPreference(key="k", value="v")
     try:
         pref.key = "other"  # type: ignore[misc]
-        assert False, "Should have raised"
+        raise AssertionError("Should have raised")
     except Exception:
         pass
 
@@ -200,6 +197,6 @@ def test_communication_style_frozen() -> None:
     style = CommunicationStyle()
     try:
         style.formality = 0.9  # type: ignore[misc]
-        assert False, "Should have raised"
+        raise AssertionError("Should have raised")
     except Exception:
         pass

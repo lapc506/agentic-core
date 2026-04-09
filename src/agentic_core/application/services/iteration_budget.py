@@ -1,10 +1,12 @@
 """Iteration budget and stuck detection for agent sessions."""
 
 from __future__ import annotations
-from dataclasses import dataclass
-from enum import Enum
 
-class BudgetStatus(str, Enum):
+from dataclasses import dataclass
+from enum import StrEnum
+
+
+class BudgetStatus(StrEnum):
     OK = "ok"
     WARNING = "warning"  # 70%+
     CRITICAL = "critical"  # 90%+

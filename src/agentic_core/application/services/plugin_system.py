@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -54,7 +54,7 @@ class PluginRegistry:
         plugin = Plugin(
             manifest=manifest,
             state=PluginState.INSTALLED,
-            installed_at=datetime.now(timezone.utc),
+            installed_at=datetime.now(UTC),
         )
         self._plugins[manifest.name] = plugin
         logger.info("Registered plugin: %s v%s", manifest.name, manifest.version)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
@@ -15,7 +15,7 @@ class UserPreference(BaseModel, frozen=True):
     value: str
     confidence: float = Field(ge=0.0, le=1.0, default=0.5)
     observed_count: int = Field(ge=1, default=1)
-    last_observed: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_observed: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class CommunicationStyle(BaseModel, frozen=True):
@@ -34,8 +34,8 @@ class UserProfile(BaseModel):
     preferences: dict[str, UserPreference] = Field(default_factory=dict)
     style: CommunicationStyle = Field(default_factory=CommunicationStyle)
     interaction_count: int = 0
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class UserModelingService:
@@ -65,7 +65,7 @@ class UserModelingService:
         where decay_factor = 0.1 per observation.
         """
         profile = self.get_or_create(user_id)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         decay_factor = 0.1
 
         if key in profile.preferences:
@@ -114,7 +114,7 @@ class UserModelingService:
         where n is the current interaction_count.
         """
         profile = self.get_or_create(user_id)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         n = max(profile.interaction_count, 1)
         weight_old = n / (n + 1)
         weight_new = 1.0 / (n + 1)

@@ -54,5 +54,5 @@ class FalkorDBAdapter(GraphStorePort):
         if result.result_set:
             headers = result.header
             for row in result.result_set:
-                rows.append(dict(zip(headers, row)))
+                rows.append(dict(zip(headers, row, strict=False)))
         return rows

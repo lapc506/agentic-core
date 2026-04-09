@@ -6,7 +6,6 @@ from agentic_core.application.services.programmatic_tools import (
     ProgrammaticToolExecutor,
 )
 
-
 # ── Config defaults ──────────────────────────────────────────────
 
 

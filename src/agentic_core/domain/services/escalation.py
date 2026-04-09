@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 from simpleeval import simple_eval
 
-from agentic_core.domain.entities.persona import EscalationRule
+if TYPE_CHECKING:
+    from agentic_core.domain.entities.persona import EscalationRule
 
 logger = logging.getLogger(__name__)
 

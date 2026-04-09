@@ -11,7 +11,6 @@ from agentic_core.application.services.memory_manager import (
     Relationship,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
 # ---------------------------------------------------------------------------

@@ -18,7 +18,11 @@ async def test_superpowers_default_flow():
 
 
 async def test_superpowers_with_custom_brainstorm():
-    from agentic_core.application.services.superpowers_flow import Approach, GapReport, TerrainReport
+    from agentic_core.application.services.superpowers_flow import (
+        Approach,
+        GapReport,
+        TerrainReport,
+    )
 
     async def custom_brainstorm(idea: str, terrain: TerrainReport, gaps: GapReport) -> list[Approach]:
         return [

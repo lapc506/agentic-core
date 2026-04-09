@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
-from concurrent import futures
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import grpc
 from grpc import aio as grpc_aio
@@ -12,6 +10,9 @@ from agentic_core.adapters.primary.grpc.generated import (
     agentic_core_pb2,
     agentic_core_pb2_grpc,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 logger = logging.getLogger(__name__)
 

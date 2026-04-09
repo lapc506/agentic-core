@@ -5,15 +5,14 @@ from __future__ import annotations
 
 import pytest
 
-from agentic_core.application.services.lane_orchestrator import (
-    Lane,
-    LaneFailureClass,
-    LaneOrchestrator,
-    LaneState,
-)
 from agentic_core.application.services.green_contract import (
     GreenContract,
     GreenLevel,
+)
+from agentic_core.application.services.lane_orchestrator import (
+    LaneFailureClass,
+    LaneOrchestrator,
+    LaneState,
 )
 from agentic_core.application.services.recovery_recipes import (
     FailureScenario,
@@ -29,7 +28,6 @@ from agentic_core.application.services.task_packet import (
     TaskPacket,
     validate_packet,
 )
-
 
 # ---------------------------------------------------------------------------
 # Lane Orchestrator

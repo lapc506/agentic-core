@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
@@ -18,7 +18,7 @@ class AgentMessage(BaseModel, frozen=True):
     content: str
     correlation_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
     )
 
 
@@ -35,7 +35,7 @@ class AgentMailbox:
         """Return the next message, or ``None`` if *timeout* expires."""
         try:
             return await asyncio.wait_for(self._inbox.get(), timeout=timeout)
-        except (asyncio.TimeoutError, TimeoutError):
+        except TimeoutError:
             return None
 
     @property

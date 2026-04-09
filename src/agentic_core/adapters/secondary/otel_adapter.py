@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentic_core.application.ports.metrics import MetricsPort
 from agentic_core.application.ports.tracing import TracingPort
-from agentic_core.config.settings import ObservabilitySettings
+
+if TYPE_CHECKING:
+    from agentic_core.config.settings import ObservabilitySettings
 
 logger = logging.getLogger(__name__)
 
@@ -32,12 +34,12 @@ class OTelAdapter(TracingPort, MetricsPort):
 
     def initialize(self) -> None:
         try:
-            from opentelemetry import trace, metrics
+            from opentelemetry import metrics, trace
+            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+            from opentelemetry.sdk.metrics import MeterProvider
+            from opentelemetry.sdk.resources import Resource
             from opentelemetry.sdk.trace import TracerProvider
             from opentelemetry.sdk.trace.export import BatchSpanProcessor
-            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-            from opentelemetry.sdk.resources import Resource
-            from opentelemetry.sdk.metrics import MeterProvider
 
             resource = Resource.create({
                 "service.name": "agentic-core",

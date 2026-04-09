@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-from agentic_core.application.ports.session import SessionPort
-from agentic_core.domain.entities.session import Session
-from agentic_core.domain.events.domain_events import SessionCreated
-from agentic_core.shared_kernel.events import EventBus
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 import uuid_utils
-from datetime import datetime, timezone
+
+from agentic_core.domain.entities.session import Session
+from agentic_core.domain.events.domain_events import SessionCreated
+
+if TYPE_CHECKING:
+    from agentic_core.application.ports.session import SessionPort
+    from agentic_core.shared_kernel.events import EventBus
 
 
 class CreateSessionCommand:
@@ -31,7 +35,7 @@ class CreateSessionHandler:
                 session_id=session_id,
                 persona_id=cmd.persona_id,
                 user_id=cmd.user_id,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             )
         )
         return session

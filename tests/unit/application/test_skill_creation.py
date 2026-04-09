@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import pytest
-
 from agentic_core.application.services.skill_creation import (
     ProceduralSkill,
     SkillCreationService,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

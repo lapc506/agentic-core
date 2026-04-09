@@ -4,21 +4,8 @@ credential vault, and network egress policy."""
 from __future__ import annotations
 
 import asyncio
-import os
+from typing import TYPE_CHECKING
 
-import pytest
-
-from agentic_core.application.services.sandbox_executor import (
-    SandboxBackend,
-    SandboxExecutor,
-    SandboxPermission,
-    SandboxPolicy,
-)
-from agentic_core.application.services.privacy_router import (
-    DataSensitivity,
-    PrivacyRouter,
-    RoutingDecision,
-)
 from agentic_core.application.services.credential_vault import (
     CredentialVault,
 )
@@ -27,7 +14,20 @@ from agentic_core.application.services.network_egress import (
     EgressRequest,
     NetworkEgressPolicy,
 )
+from agentic_core.application.services.privacy_router import (
+    DataSensitivity,
+    PrivacyRouter,
+    RoutingDecision,
+)
+from agentic_core.application.services.sandbox_executor import (
+    SandboxBackend,
+    SandboxExecutor,
+    SandboxPermission,
+    SandboxPolicy,
+)
 
+if TYPE_CHECKING:
+    import pytest
 
 # ---------------------------------------------------------------------------
 # Sandbox Executor

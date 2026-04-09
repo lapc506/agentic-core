@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import pytest
-from datetime import datetime, timezone
 
 from agentic_core.domain.events.domain_events import SLOBreached
 from agentic_core.domain.value_objects.slo import SLOTargets
 from agentic_core.shared_kernel.events import DomainEvent, EventBus
 from agentic_core.sre.chaos import ChaosConfig, ChaosError, ChaosHooks
 from agentic_core.sre.slo_tracker import SLIWindow, SLOTracker
-
 
 # -- SLIWindow --
 

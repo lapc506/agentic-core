@@ -1,10 +1,12 @@
 """Security auditor — proactive scan for misconfigurations (agentic-core doctor)."""
 
 from __future__ import annotations
-from dataclasses import dataclass, field
-from enum import Enum
 
-class Severity(str, Enum):
+from dataclasses import dataclass
+from enum import StrEnum
+
+
+class Severity(StrEnum):
     CRITICAL = "critical"
     WARNING = "warning"
     INFO = "info"

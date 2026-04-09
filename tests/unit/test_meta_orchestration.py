@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from agentic_core.application.services.gsd_sequencer import GSDSequencer, TaskResult
 from agentic_core.application.services.auto_research import AutoResearchLoop
-from agentic_core.domain.entities.roadmap import GateCondition, Phase, Roadmap, RoadmapTask
+from agentic_core.application.services.gsd_sequencer import GSDSequencer, TaskResult
+from agentic_core.domain.entities.roadmap import Phase, Roadmap, RoadmapTask
 from agentic_core.domain.entities.skill import Skill
 from agentic_core.domain.value_objects.eval import BinaryEvalRule
 from agentic_core.shared_kernel.events import EventBus
-
 
 # -- GSD Sequencer --
 

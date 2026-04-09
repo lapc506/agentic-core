@@ -1,14 +1,14 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class SessionState(str, Enum):
+class SessionState(StrEnum):
     ACTIVE = "active"
     PAUSED = "paused"
     ESCALATED = "escalated"
     COMPLETED = "completed"
 
 
-class GraphTemplate(str, Enum):
+class GraphTemplate(StrEnum):
     REACT = "react"
     PLAN_EXECUTE = "plan-and-execute"
     REFLEXION = "reflexion"
@@ -17,7 +17,7 @@ class GraphTemplate(str, Enum):
     ORCHESTRATOR = "orchestrator"
 
 
-class EmbeddingTaskType(str, Enum):
+class EmbeddingTaskType(StrEnum):
     SEMANTIC_SIMILARITY = "SEMANTIC_SIMILARITY"
     RETRIEVAL_QUERY = "RETRIEVAL_QUERY"
     RETRIEVAL_DOCUMENT = "RETRIEVAL_DOCUMENT"
@@ -28,7 +28,7 @@ class EmbeddingTaskType(str, Enum):
     FACT_VERIFICATION = "FACT_VERIFICATION"
 
 
-class PersonaCapability(str, Enum):
+class PersonaCapability(StrEnum):
     GSD = "gsd"
     SUPERPOWERS = "superpowers"
     AUTO_RESEARCH = "auto_research"

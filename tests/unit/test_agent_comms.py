@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import uuid
 
 import pytest
@@ -10,7 +9,6 @@ from agentic_core.application.services.agent_comms import (
     AgentMailbox,
     AgentMessage,
 )
-
 
 # ---------------------------------------------------------------------------
 # AgentMessage construction & immutability

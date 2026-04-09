@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -10,7 +10,6 @@ from agentic_core.application.services.cross_session_recall import (
     RecallQuery,
     RecallResult,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fake adapter
@@ -55,7 +54,7 @@ class FakeRecallPort(RecallPort):
 # Value-object construction
 # ---------------------------------------------------------------------------
 
-_TS = datetime(2025, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+_TS = datetime(2025, 6, 1, 12, 0, 0, tzinfo=UTC)
 
 
 def _match(session_id: str = "s1", content: str = "hello", score: float = 0.9) -> RecallMatch:

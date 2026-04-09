@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from typing import TYPE_CHECKING
 
-from agentic_core.application.ports.recall import RecallMatch, RecallPort
+if TYPE_CHECKING:
+    from agentic_core.application.ports.recall import RecallMatch, RecallPort
 
 logger = logging.getLogger(__name__)
 

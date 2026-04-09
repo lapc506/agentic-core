@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import logging
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
 
-class MediaType(str, Enum):
+class MediaType(StrEnum):
     """Supported media types for the processing pipeline."""
 
     IMAGE = "image"

@@ -1,13 +1,12 @@
 """Tests for graph templates. Run without LangGraph (fallback mode)."""
 from __future__ import annotations
 
-from agentic_core.graph_templates.react import ReactGraphTemplate, ReactState
-from agentic_core.graph_templates.plan_execute import PlanExecuteGraphTemplate, PlanExecuteState
-from agentic_core.graph_templates.reflexion import ReflexionGraphTemplate, ReflexionState
 from agentic_core.graph_templates.llm_compiler import LLMCompilerGraphTemplate, LLMCompilerState
-from agentic_core.graph_templates.supervisor import SupervisorGraphTemplate, SupervisorState
 from agentic_core.graph_templates.orchestrator import OrchestratorGraphTemplate, OrchestratorState
-
+from agentic_core.graph_templates.plan_execute import PlanExecuteGraphTemplate, PlanExecuteState
+from agentic_core.graph_templates.react import ReactGraphTemplate, ReactState
+from agentic_core.graph_templates.reflexion import ReflexionGraphTemplate, ReflexionState
+from agentic_core.graph_templates.supervisor import SupervisorGraphTemplate, SupervisorState
 
 # -- React --
 

@@ -1,15 +1,16 @@
 """Lane orchestrator — multi-agent parallel work stream coordination."""
 from __future__ import annotations
+
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class LaneState(str, Enum):
+class LaneState(StrEnum):
     STARTED = "started"
     READY = "ready"
     BLOCKED = "blocked"
@@ -23,7 +24,7 @@ class LaneState(str, Enum):
     CLOSED = "closed"
 
 
-class LaneFailureClass(str, Enum):
+class LaneFailureClass(StrEnum):
     PROMPT_DELIVERY = "prompt_delivery"
     TRUST_GATE = "trust_gate"
     BRANCH_DIVERGENCE = "branch_divergence"
@@ -55,7 +56,7 @@ class Lane:
     modules: list[str] = field(default_factory=list)
     failure_class: LaneFailureClass | None = None
     recovery_attempts: int = 0
-    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     metadata: dict[str, Any] = field(default_factory=dict)
 
 

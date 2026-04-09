@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from typing import Any, Callable, Awaitable
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from agentic_core.domain.entities.skill import Skill
 from agentic_core.domain.events.domain_events import SkillOptimized
 from agentic_core.domain.services.eval_scoring import EvalScoring
-from agentic_core.domain.value_objects.eval import BinaryEvalRule
-from agentic_core.shared_kernel.events import EventBus
-from datetime import datetime, timezone
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
+    from agentic_core.domain.value_objects.eval import BinaryEvalRule
+    from agentic_core.shared_kernel.events import EventBus
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +95,7 @@ class AutoResearchLoop:
                 old_score=initial_score,
                 new_score=best_score,
                 version=best_skill.version,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ))
 
         return OptimizationResult(

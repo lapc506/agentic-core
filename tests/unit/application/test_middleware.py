@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import uuid_utils
 
@@ -22,7 +22,7 @@ def _make_msg(**overrides: object) -> AgentMessage:
         "role": "user",
         "content": "hello",
         "metadata": {},
-        "timestamp": datetime.now(timezone.utc),
+        "timestamp": datetime.now(UTC),
     }
     defaults.update(overrides)
     return AgentMessage(**defaults)

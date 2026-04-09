@@ -21,7 +21,7 @@ class PlanExecuteGraphTemplate(BaseAgentGraph):
 
     def build_graph(self) -> Any:
         try:
-            from langgraph.graph import StateGraph, END
+            from langgraph.graph import END, StateGraph
 
             graph = StateGraph(PlanExecuteState)
             graph.add_node("plan", self._plan)

@@ -1,14 +1,15 @@
 """Tests for CLI primary adapter (#58)."""
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
-from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from agentic_core.adapters.primary.cli import CLITransport, CommandNotFoundError
 
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from pathlib import Path
 
 REVIEW_CMD = """\
 ---

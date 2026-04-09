@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from agentic_core.adapters.primary.gateway import (
     GatewayAdapter,
-    GatewayCallback,
     GatewayConfig,
     GatewayPlatform,
     GatewayRegistry,
     InboundMessage,
     OutboundMessage,
 )
-
 
 # --- Config / message construction ---
 

@@ -1,16 +1,17 @@
 """Stale branch detection and auto-remediation policy."""
 from __future__ import annotations
+
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class BranchFreshness(str, Enum):
+class BranchFreshness(StrEnum):
     FRESH = "fresh"
     STALE = "stale"
     DIVERGED = "diverged"
 
 
-class StaleBranchPolicy(str, Enum):
+class StaleBranchPolicy(StrEnum):
     AUTO_REBASE = "auto_rebase"
     AUTO_MERGE_FORWARD = "auto_merge_forward"
     WARN_ONLY = "warn_only"

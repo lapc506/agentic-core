@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
 
-class GateAction(str, Enum):
+class GateAction(StrEnum):
     BLOCK = "block"
     WARN = "warn"
     REWRITE = "rewrite"

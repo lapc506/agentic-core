@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from agentic_core.domain.entities.persona import Persona
-from agentic_core.domain.services.routing import RoutingService
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from agentic_core.domain.entities.persona import Persona
+    from agentic_core.domain.services.routing import RoutingService
 
 
 class ListPersonasQuery:

@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from agentic_core.domain.entities.roadmap import Phase, Roadmap, RoadmapTask
+if TYPE_CHECKING:
+    from agentic_core.domain.entities.roadmap import Phase, Roadmap, RoadmapTask
 
 logger = logging.getLogger(__name__)
 

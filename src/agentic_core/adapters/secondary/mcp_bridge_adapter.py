@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
-from typing import Any
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 
 from agentic_core.application.ports.tool import ToolPort
-from agentic_core.config.settings import MCPBridgeConfig, MCPServerEntry, MCPToolFilter
-from agentic_core.domain.events.domain_events import ToolDegraded, ToolRecovered
+from agentic_core.domain.events.domain_events import ToolDegraded
 from agentic_core.domain.value_objects.tools import ToolError, ToolHealthStatus, ToolResult
-from agentic_core.shared_kernel.events import EventBus
 
-from datetime import datetime, timezone
+if TYPE_CHECKING:
+    from agentic_core.config.settings import MCPBridgeConfig, MCPServerEntry, MCPToolFilter
+    from agentic_core.shared_kernel.events import EventBus
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ class MCPServerConnection:
 
             if self.config.transport == "stdio" and self.config.command:
                 env = _build_safe_env(self.config.env)
-                server_params = StdioServerParameters(
+                StdioServerParameters(
                     command=self.config.command,
                     args=self.config.args,
                     env=env,
@@ -221,5 +221,5 @@ class MCPBridgeAdapter(ToolPort):
     async def _handle_degradation(self, tool_name: str, reason: str) -> None:
         await self.deregister_tool(tool_name)
         await self._event_bus.publish(ToolDegraded(
-            tool_name=tool_name, reason=reason, timestamp=datetime.now(timezone.utc),
+            tool_name=tool_name, reason=reason, timestamp=datetime.now(UTC),
         ))

@@ -1,19 +1,19 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from agentic_core.domain.events.domain_events import (
     ErrorBudgetExhausted,
     HumanEscalationRequested,
     MessageProcessed,
     SessionCreated,
-    SLOBreached,
     SkillOptimized,
+    SLOBreached,
     ToolDegraded,
     ToolRecovered,
 )
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def test_message_processed():

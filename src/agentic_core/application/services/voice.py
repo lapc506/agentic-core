@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import logging
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
 
-class TTSProvider(str, Enum):
+class TTSProvider(StrEnum):
     """Supported text-to-speech providers."""
 
     EDGE = "edge"
@@ -16,7 +16,7 @@ class TTSProvider(str, Enum):
     OPENAI = "openai"
 
 
-class STTProvider(str, Enum):
+class STTProvider(StrEnum):
     """Supported speech-to-text providers."""
 
     LOCAL_WHISPER = "local_whisper"

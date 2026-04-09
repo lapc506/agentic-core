@@ -1,7 +1,7 @@
 """Integration tests for RedisAdapter. Requires Redis at localhost:6399."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 import uuid_utils
@@ -19,7 +19,7 @@ def _msg(session_id: str = "s1", content: str = "hello") -> AgentMessage:
         role="user",
         content=content,
         metadata={},
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
 
@@ -53,7 +53,7 @@ class TestRedisAdapter:
         assert len(messages) == 3
 
     async def test_context_window(self, adapter: RedisAdapter):
-        for i in range(5):
+        for _i in range(5):
             await adapter.store_message(_msg(content="x" * 100))
 
         # Each msg ~25 tokens (100 chars / 4), max_tokens=60 should fit ~2

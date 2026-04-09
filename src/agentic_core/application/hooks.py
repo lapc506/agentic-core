@@ -57,7 +57,7 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from collections.abc import Awaitable, Callable
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel
@@ -65,7 +65,7 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 
-class HookEvent(str, Enum):
+class HookEvent(StrEnum):
     # --- original events (HookRegistry) ---
     PRE_TOOL_USE = "pre_tool_use"
     POST_TOOL_USE = "post_tool_use"
@@ -81,7 +81,7 @@ class HookEvent(str, Enum):
     SESSION_END = "session_end"
 
 
-class HookVerdict(str, Enum):
+class HookVerdict(StrEnum):
     ALLOW = "allow"
     BLOCK = "block"
 

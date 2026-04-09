@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -23,7 +23,7 @@ class ProceduralSkill:
     tools_used: list[str] = field(default_factory=list)
     success_rate: float = 1.0
     times_used: int = 0
-    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     last_used: str | None = None
     tags: list[str] = field(default_factory=list)
 
@@ -89,7 +89,7 @@ class SkillCreationService:
         if existing:
             # Update existing skill's success rate
             existing.times_used += 1
-            existing.last_used = datetime.now(timezone.utc).isoformat()
+            existing.last_used = datetime.now(UTC).isoformat()
             self._save_skill(existing)
             return existing
 

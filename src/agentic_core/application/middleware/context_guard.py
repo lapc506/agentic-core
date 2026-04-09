@@ -2,13 +2,16 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 from agentic_core.application.middleware.base import (
     Middleware,
     NextHandler,
     RequestContext,
 )
-from agentic_core.domain.value_objects.messages import AgentMessage
+
+if TYPE_CHECKING:
+    from agentic_core.domain.value_objects.messages import AgentMessage
 
 logger = logging.getLogger(__name__)
 

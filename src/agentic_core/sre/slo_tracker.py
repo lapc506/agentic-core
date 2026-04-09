@@ -4,11 +4,14 @@ import logging
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
-from agentic_core.domain.events.domain_events import ErrorBudgetExhausted, SLOBreached
-from agentic_core.domain.value_objects.slo import SLOTargets
-from agentic_core.shared_kernel.events import EventBus
+from agentic_core.domain.events.domain_events import SLOBreached
+
+if TYPE_CHECKING:
+    from agentic_core.domain.value_objects.slo import SLOTargets
+    from agentic_core.shared_kernel.events import EventBus
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +79,7 @@ class SLOTracker:
         if targets is None:
             return
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Check success rate SLO
         current_rate = window.success_rate()

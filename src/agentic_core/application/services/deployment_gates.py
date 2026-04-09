@@ -1,10 +1,12 @@
 """Progressive deployment gates with stage-aware thresholds."""
 
 from __future__ import annotations
-from dataclasses import dataclass
-from enum import Enum
 
-class Stage(str, Enum):
+from dataclasses import dataclass
+from enum import StrEnum
+
+
+class Stage(StrEnum):
     DEV = "dev"
     STAGING = "staging"
     PRODUCTION = "production"

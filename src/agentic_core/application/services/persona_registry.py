@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
@@ -14,10 +13,14 @@ from agentic_core.domain.entities.persona import (
     PersonaCapabilities,
 )
 from agentic_core.domain.enums import GraphTemplate
-from agentic_core.domain.services.routing import RoutingService
 from agentic_core.domain.value_objects.model_config import ModelConfig
 from agentic_core.domain.value_objects.slo import SLOTargets
-from agentic_core.graph_templates.base import BaseAgentGraph
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from agentic_core.domain.services.routing import RoutingService
+    from agentic_core.graph_templates.base import BaseAgentGraph
 
 logger = logging.getLogger(__name__)
 

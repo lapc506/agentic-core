@@ -5,19 +5,22 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Callable
+from enum import StrEnum
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
 
-class ConfirmationMode(str, Enum):
+class ConfirmationMode(StrEnum):
     ALWAYS = "always"
     CONDITIONAL = "conditional"
     NEVER = "never"
 
 
-class ToolHints(str, Enum):
+class ToolHints(StrEnum):
     DESTRUCTIVE = "destructive"
     READ_ONLY = "read_only"
     IDEMPOTENT = "idempotent"
@@ -81,9 +84,7 @@ class HITLConfirmationService:
             if condition:
                 return condition(args)
         hints = self._tool_hints.get(tool_name, [])
-        if ToolHints.DESTRUCTIVE in hints:
-            return True
-        return False
+        return ToolHints.DESTRUCTIVE in hints
 
     async def request_confirmation(
         self,
@@ -99,7 +100,7 @@ class HITLConfirmationService:
         try:
             result = await asyncio.wait_for(future, timeout=request.timeout_seconds)
             return result
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("HITL confirmation timed out for %s", request.tool_name)
             return ConfirmationResult(approved=False, reason="Timeout")
         finally:

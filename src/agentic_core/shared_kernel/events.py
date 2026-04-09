@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from collections.abc import Awaitable, Callable
-from datetime import datetime
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+    from datetime import datetime
 
 logger = logging.getLogger(__name__)
 

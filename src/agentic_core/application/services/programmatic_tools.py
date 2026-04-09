@@ -124,9 +124,8 @@ class ProgrammaticToolExecutor:
                             violations.append(f"Disallowed attribute: {full}")
 
             # Bare calls to eval / exec / __import__
-            elif isinstance(node, ast.Name):
-                if node.id in _DISALLOWED_ATTRIBUTES:
-                    violations.append(f"Disallowed builtin: {node.id}")
+            elif isinstance(node, ast.Name) and node.id in _DISALLOWED_ATTRIBUTES:
+                violations.append(f"Disallowed builtin: {node.id}")
 
         return violations
 

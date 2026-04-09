@@ -1,5 +1,6 @@
 """Green Contract — graduated CI test levels as formal merge eligibility gates."""
 from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import IntEnum
 

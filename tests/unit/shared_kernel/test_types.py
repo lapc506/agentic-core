@@ -1,4 +1,4 @@
-from agentic_core.shared_kernel.types import SessionId, PersonaId, TraceId
+from agentic_core.shared_kernel.types import PersonaId, SessionId, TraceId
 
 
 def test_session_id_is_str():

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -22,7 +22,7 @@ def _msg(content: str = "hello", **meta: object) -> AgentMessage:
         role="user",
         content=content,
         metadata=meta,
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
 
@@ -103,7 +103,7 @@ async def test_auth_jwt_passthrough():
     chain = MiddlewareChain([mw], _echo)
     msg = _msg(authorization="Bearer token123")
     ctx = RequestContext()
-    result = await chain(msg, ctx)
+    await chain(msg, ctx)
     assert ctx.user_id == "jwt_user"
 
 

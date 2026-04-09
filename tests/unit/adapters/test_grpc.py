@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import pytest
 from unittest.mock import AsyncMock
 
-from agentic_core.adapters.primary.grpc.server import AgentServiceServicer, GrpcTransport
 from agentic_core.adapters.primary.grpc.generated import agentic_core_pb2
+from agentic_core.adapters.primary.grpc.server import AgentServiceServicer, GrpcTransport
 from agentic_core.domain.entities.persona import Persona
 from agentic_core.domain.entities.session import Session
-from agentic_core.domain.enums import SessionState
 
 
 class FakeContext:

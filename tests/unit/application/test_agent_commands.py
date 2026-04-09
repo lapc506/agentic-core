@@ -67,7 +67,10 @@ async def test_create_agent_yaml_contains_all_fields(agents_dir):
 
 
 async def test_update_agent_modifies_fields(agents_dir):
-    from agentic_core.application.commands.update_agent import UpdateAgentCommand, UpdateAgentHandler
+    from agentic_core.application.commands.update_agent import (
+        UpdateAgentCommand,
+        UpdateAgentHandler,
+    )
 
     # Create first
     create_handler = CreateAgentHandler(agents_dir=agents_dir)
@@ -88,7 +91,10 @@ async def test_update_agent_modifies_fields(agents_dir):
 
 
 async def test_update_agent_ignores_disallowed_keys(agents_dir):
-    from agentic_core.application.commands.update_agent import UpdateAgentCommand, UpdateAgentHandler
+    from agentic_core.application.commands.update_agent import (
+        UpdateAgentCommand,
+        UpdateAgentHandler,
+    )
 
     create_handler = CreateAgentHandler(agents_dir=agents_dir)
     await create_handler.execute(CreateAgentCommand(name="Guard Agent", role="guard", description="guarded"))
@@ -103,7 +109,10 @@ async def test_update_agent_ignores_disallowed_keys(agents_dir):
 
 
 async def test_update_agent_raises_if_not_found(agents_dir):
-    from agentic_core.application.commands.update_agent import UpdateAgentCommand, UpdateAgentHandler
+    from agentic_core.application.commands.update_agent import (
+        UpdateAgentCommand,
+        UpdateAgentHandler,
+    )
 
     handler = UpdateAgentHandler(agents_dir=agents_dir)
     cmd = UpdateAgentCommand(agent_slug="nonexistent", updates={"role": "x"})
@@ -112,7 +121,10 @@ async def test_update_agent_raises_if_not_found(agents_dir):
 
 
 async def test_update_gates_persists_to_yaml(agents_dir):
-    from agentic_core.application.commands.update_gates import UpdateGatesCommand, UpdateGatesHandler
+    from agentic_core.application.commands.update_gates import (
+        UpdateGatesCommand,
+        UpdateGatesHandler,
+    )
     from agentic_core.domain.value_objects.gate import GateAction
 
     # Setup: create agent first
@@ -139,7 +151,10 @@ async def test_update_gates_persists_to_yaml(agents_dir):
 
 
 async def test_update_gates_raises_if_not_found(agents_dir):
-    from agentic_core.application.commands.update_gates import UpdateGatesCommand, UpdateGatesHandler
+    from agentic_core.application.commands.update_gates import (
+        UpdateGatesCommand,
+        UpdateGatesHandler,
+    )
 
     handler = UpdateGatesHandler(agents_dir=agents_dir)
     cmd = UpdateGatesCommand(agent_slug="ghost", gates=[])

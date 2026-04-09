@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from agentic_core.domain.enums import SessionState
@@ -56,7 +56,7 @@ class Session:
 
     @classmethod
     def create(cls, id: str, persona_id: str, user_id: str) -> Session:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return cls(
             id=id,
             persona_id=persona_id,
@@ -74,4 +74,4 @@ class Session:
                 f"Cannot transition from {self.state.value} to {new_state.value}"
             )
         self.state = new_state
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(UTC)

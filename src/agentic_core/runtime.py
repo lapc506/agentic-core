@@ -2,25 +2,22 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
+from aiohttp import web
 
 from agentic_core.adapters.primary.grpc.server import GrpcTransport
 from agentic_core.adapters.primary.http_api import create_app
 from agentic_core.adapters.primary.websocket import WebSocketTransport
-from aiohttp import web
 from agentic_core.application.commands.create_session import (
     CreateSessionCommand,
     CreateSessionHandler,
 )
 from agentic_core.application.commands.handle_message import (
-    HandleMessageCommand,
     HandleMessageHandler,
 )
 from agentic_core.application.commands.resume_hitl import (
-    ResumeHITLCommand,
     ResumeHITLHandler,
 )
 from agentic_core.application.middleware.base import MiddlewareChain, RequestContext
@@ -28,11 +25,15 @@ from agentic_core.application.middleware.tracing import TracingMiddleware
 from agentic_core.application.queries.get_session import GetSessionHandler, GetSessionQuery
 from agentic_core.application.queries.list_personas import ListPersonasHandler, ListPersonasQuery
 from agentic_core.config.settings import AgenticSettings
-from agentic_core.domain.entities.persona import Persona
-from agentic_core.domain.entities.session import Session
 from agentic_core.domain.services.routing import RoutingService
-from agentic_core.domain.value_objects.messages import AgentMessage
 from agentic_core.shared_kernel.events import EventBus
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from agentic_core.domain.entities.persona import Persona
+    from agentic_core.domain.entities.session import Session
+    from agentic_core.domain.value_objects.messages import AgentMessage
 
 logger = logging.getLogger(__name__)
 

@@ -3,14 +3,14 @@ from __future__ import annotations
 
 import logging
 import uuid
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
 
-class TUIPanel(str, Enum):
+class TUIPanel(StrEnum):
     """Available TUI panels."""
 
     CONVERSATION = "conversation"

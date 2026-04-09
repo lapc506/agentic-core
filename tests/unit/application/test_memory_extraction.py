@@ -8,7 +8,6 @@ from agentic_core.application.services.memory_extraction import (
     MemoryExtractionService,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -121,7 +120,7 @@ async def test_different_category_same_words_not_deduplicated():
     # "I like Python" triggers only PREFERENCE (no goal/skill/project/feedback signal)
     await _extract(svc, "I like Python for data work")
     # "My goal is Python data work" triggers only GOAL
-    results = await _extract(svc, "My goal is Python data work")
+    await _extract(svc, "My goal is Python data work")
 
     # Both should be stored since categories differ; dedup is per-category
     assert svc.memory_count == 2

@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Callable, Awaitable
+from typing import TYPE_CHECKING, Any
 
-from agentic_core.application.services.gsd_sequencer import GSDSequencer, RoadmapResult
 from agentic_core.domain.entities.roadmap import Roadmap
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
+    from agentic_core.application.services.gsd_sequencer import GSDSequencer, RoadmapResult
 
 logger = logging.getLogger(__name__)
 

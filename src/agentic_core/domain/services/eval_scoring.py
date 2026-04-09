@@ -10,7 +10,7 @@ class EvalScoring:
         if len(rules) != len(actuals):
             raise ValueError("rules and actuals must have the same length")
         results: list[EvalResult] = []
-        for rule, actual in zip(rules, actuals):
+        for rule, actual in zip(rules, actuals, strict=False):
             results.append(
                 EvalResult(
                     rule_name=rule.name,

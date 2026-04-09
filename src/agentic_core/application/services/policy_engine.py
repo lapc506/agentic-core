@@ -4,7 +4,7 @@ from __future__ import annotations
 import fnmatch
 import re
 from dataclasses import dataclass, field
-from enum import Enum, IntEnum
+from enum import IntEnum, StrEnum
 from typing import Any
 
 
@@ -16,7 +16,7 @@ class Priority(IntEnum):
     ADMIN = 5
 
 
-class Decision(str, Enum):
+class Decision(StrEnum):
     ALLOW = "allow"
     DENY = "deny"
     ASK_USER = "ask_user"
@@ -51,9 +51,8 @@ class PolicyEngine:
                 continue
             if rule.modes and mode not in rule.modes:
                 continue
-            if rule.args_pattern:
-                if not re.search(rule.args_pattern, args_str):
-                    continue
+            if rule.args_pattern and not re.search(rule.args_pattern, args_str):
+                continue
             return rule.decision, rule.reason
         return Decision.ALLOW, "No matching policy rule"
 

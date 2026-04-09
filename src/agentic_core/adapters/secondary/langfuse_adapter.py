@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentic_core.application.ports.cost_tracking import CostTrackingPort
-from agentic_core.config.settings import ObservabilitySettings
+
+if TYPE_CHECKING:
+    from agentic_core.config.settings import ObservabilitySettings
 
 logger = logging.getLogger(__name__)
 

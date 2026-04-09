@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-import tempfile
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentic_core.application.services.persona_registry import (
-    PersonaRegistry,
     _GRAPH_REGISTRY,
+    PersonaRegistry,
     agent_persona,
 )
 from agentic_core.domain.enums import GraphTemplate
 from agentic_core.domain.services.routing import RoutingService
 from agentic_core.graph_templates.base import BaseAgentGraph
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
 SAMPLE_YAML = """
 name: test-agent

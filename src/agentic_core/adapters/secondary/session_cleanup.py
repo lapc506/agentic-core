@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from agentic_core.domain.enums import SessionState
@@ -27,7 +27,7 @@ class SessionCleanupService:
         self._checkpoint_ttl = timedelta(days=checkpoint_ttl_days)
 
     async def cleanup_expired_sessions(self) -> int:
-        cutoff = datetime.now(timezone.utc) - self._session_ttl
+        cutoff = datetime.now(UTC) - self._session_ttl
         async with self._pool.acquire() as conn:
             result = await conn.execute(
                 """UPDATE agent_sessions SET state = $1, updated_at = NOW()
@@ -43,7 +43,7 @@ class SessionCleanupService:
             return count
 
     async def cleanup_orphan_checkpoints(self) -> int:
-        cutoff = datetime.now(timezone.utc) - self._checkpoint_ttl
+        cutoff = datetime.now(UTC) - self._checkpoint_ttl
         async with self._pool.acquire() as conn:
             result = await conn.execute(
                 """DELETE FROM agent_checkpoints

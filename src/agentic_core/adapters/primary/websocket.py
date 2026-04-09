@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import os
-from collections.abc import AsyncIterator, Callable, Awaitable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import websockets
-from websockets.asyncio.server import Server, ServerConnection
 
-from agentic_core.domain.value_objects.messages import AgentMessage
+if TYPE_CHECKING:
+    from websockets.asyncio.server import Server, ServerConnection
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -42,10 +41,7 @@ class FileEditTool:
         if not old_str:
             # Create new file or append
             p.parent.mkdir(parents=True, exist_ok=True)
-            if p.exists():
-                content = p.read_text() + new_str
-            else:
-                content = new_str
+            content = p.read_text() + new_str if p.exists() else new_str
             p.write_text(content)
             return {"status": "OK", "action": "create" if not p.exists() else "append"}
 

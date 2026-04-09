@@ -1,6 +1,8 @@
 """Integration tests for FalkorDBAdapter. Requires FalkorDB at localhost:6499."""
 from __future__ import annotations
 
+import contextlib
+
 import pytest
 
 from agentic_core.adapters.secondary.falkordb_adapter import FalkorDBAdapter
@@ -14,10 +16,8 @@ class TestFalkorDBAdapter:
         a = FalkorDBAdapter(FALKORDB_URL, graph_name="test_knowledge")
         await a.connect()
         # Clean graph
-        try:
+        with contextlib.suppress(Exception):
             a._graph.query("MATCH (n) DETACH DELETE n")
-        except Exception:
-            pass
         yield a
         await a.close()
 

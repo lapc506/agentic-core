@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from agentic_core.application.services.context_loader import (
     PERSONALITY_PRESETS,
@@ -9,6 +9,8 @@ from agentic_core.application.services.context_loader import (
 )
 from agentic_core.domain.entities.persona import Persona
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # --- PersonalityConfig defaults ---
 

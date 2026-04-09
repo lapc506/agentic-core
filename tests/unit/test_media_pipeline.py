@@ -3,14 +3,13 @@ from __future__ import annotations
 import pytest
 
 from agentic_core.application.services.media_pipeline import (
+    _MB,
     MediaConfig,
     MediaInput,
     MediaPipeline,
     MediaResult,
     MediaType,
-    _MB,
 )
-
 
 # --- MediaType enum ---
 

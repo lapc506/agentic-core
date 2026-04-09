@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 from agentic_core.config.settings import AgenticSettings
 from agentic_core.domain.entities.persona import Persona
 from agentic_core.runtime import AgentRuntime

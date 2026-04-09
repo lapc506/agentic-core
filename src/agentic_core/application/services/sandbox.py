@@ -3,14 +3,14 @@ from __future__ import annotations
 
 import logging
 import time
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
 
-class SandboxBackend(str, Enum):
+class SandboxBackend(StrEnum):
     """Supported sandbox execution backends."""
 
     LOCAL = "local"

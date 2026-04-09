@@ -1,10 +1,12 @@
 """Hierarchical Task Network planner — decomposes goals into subtask trees."""
 
 from __future__ import annotations
-from dataclasses import dataclass, field
-from enum import Enum
 
-class TaskStatus(str, Enum):
+from dataclasses import dataclass, field
+from enum import StrEnum
+
+
+class TaskStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"

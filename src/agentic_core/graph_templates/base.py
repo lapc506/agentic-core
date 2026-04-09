@@ -10,7 +10,6 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from langgraph.graph.state import CompiledStateGraph
 
     from agentic_core.application.ports.tool import ToolPort
     from agentic_core.domain.entities.persona import Persona

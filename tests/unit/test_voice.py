@@ -7,7 +7,6 @@ from agentic_core.application.services.voice import (
     VoiceService,
 )
 
-
 # ── Provider enums ───────────────────────────────────────────────
 
 

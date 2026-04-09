@@ -11,18 +11,17 @@ Key concepts:
 
 from __future__ import annotations
 
-import json
 import logging
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class TaskState(str, Enum):
+class TaskState(StrEnum):
     SUBMITTED = "submitted"
     WORKING = "working"
     COMPLETED = "completed"
@@ -70,10 +69,10 @@ class A2ATask:
     messages: list[dict[str, Any]] = field(default_factory=list)
     result: dict[str, Any] | None = None
     created_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+        default_factory=lambda: datetime.now(UTC).isoformat()
     )
     updated_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+        default_factory=lambda: datetime.now(UTC).isoformat()
     )
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -146,7 +145,7 @@ class A2AServer:
                 task.state = TaskState.FAILED
                 task.result = {"error": str(e)}
 
-        task.updated_at = datetime.now(timezone.utc).isoformat()
+        task.updated_at = datetime.now(UTC).isoformat()
         return {"taskId": task.id, "state": task.state.value}
 
     def _get_task(self, task_id: str) -> dict[str, Any]:
@@ -167,7 +166,7 @@ class A2AServer:
         if not task:
             raise ValueError(f"Task not found: {task_id}")
         task.state = TaskState.CANCELED
-        task.updated_at = datetime.now(timezone.utc).isoformat()
+        task.updated_at = datetime.now(UTC).isoformat()
         return {"taskId": task.id, "state": task.state.value}
 
     async def _send_message(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -176,5 +175,5 @@ class A2AServer:
         if not task:
             raise ValueError(f"Task not found: {task_id}")
         task.messages.append(params.get("message", {}))
-        task.updated_at = datetime.now(timezone.utc).isoformat()
+        task.updated_at = datetime.now(UTC).isoformat()
         return {"taskId": task.id, "messageCount": len(task.messages)}

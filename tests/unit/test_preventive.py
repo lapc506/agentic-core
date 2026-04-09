@@ -1,8 +1,7 @@
 """Tests for preventive issues #48-#57."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock
+from datetime import UTC, datetime
 
 import pytest
 import uuid_utils
@@ -16,7 +15,7 @@ def _msg(content: str = "hello") -> AgentMessage:
     return AgentMessage(
         id=str(uuid_utils.uuid7()), session_id="s1", persona_id="p1",
         role="user", content=content, metadata={},
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
 
@@ -67,8 +66,8 @@ async def test_tool_result_always_has_output():
 # -- #55: Env var validation --
 
 def test_mcp_safe_env_warns_unresolved():
+
     from agentic_core.adapters.secondary.mcp_bridge_adapter import _build_safe_env
-    import os
     # Unresolved var should not crash, just skip
     env = _build_safe_env({"MY_KEY": "${NONEXISTENT_VAR_12345}"})
     assert "MY_KEY" not in env or env.get("MY_KEY") == ""

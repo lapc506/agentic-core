@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from agentic_core.domain.enums import GraphTemplate, PersonaCapability
-from agentic_core.domain.value_objects.gate import Gate
-from agentic_core.domain.value_objects.model_config import ModelConfig
-from agentic_core.domain.value_objects.slo import SLOTargets
 
 if TYPE_CHECKING:
     from agentic_core.application.services.context_loader import PersonalityConfig
+    from agentic_core.domain.value_objects.gate import Gate
+    from agentic_core.domain.value_objects.model_config import ModelConfig
+    from agentic_core.domain.value_objects.slo import SLOTargets
     from agentic_core.graph_templates.base import BaseAgentGraph
 
 

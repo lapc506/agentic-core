@@ -6,13 +6,13 @@ from __future__ import annotations
 
 import time
 from types import SimpleNamespace
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
+from typing import TYPE_CHECKING, Any
+from unittest.mock import AsyncMock, MagicMock
 
 from agentic_core.application.services.graph_service import GraphService
 
+if TYPE_CHECKING:
+    import pytest
 
 # ---------------------------------------------------------------------------
 # Helpers

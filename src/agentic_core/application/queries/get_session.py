@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from agentic_core.application.ports.session import SessionPort
-from agentic_core.domain.entities.session import Session
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from agentic_core.application.ports.session import SessionPort
+    from agentic_core.domain.entities.session import Session
 
 
 class GetSessionQuery:

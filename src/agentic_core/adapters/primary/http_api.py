@@ -11,7 +11,7 @@ import json
 import logging
 import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +19,7 @@ import aiohttp
 import yaml
 from aiohttp import web
 
+from agentic_core.adapters.primary.a2a import A2AServer, AgentCard
 from agentic_core.application.commands.create_agent import (
     CreateAgentCommand,
     CreateAgentHandler,
@@ -39,8 +40,6 @@ from agentic_core.application.queries.list_agents import (
     ListAgentsHandler,
     ListAgentsQuery,
 )
-from agentic_core.adapters.primary.a2a import A2AServer, AgentCard
-
 
 # ---------------------------------------------------------------------------
 # Route handlers
@@ -238,7 +237,7 @@ def _load_agent_prompt(app: web.Application, persona_id: str) -> str:
 
 def _ollama_timestamp() -> str:
     """Return an ISO-8601 timestamp with trailing Z for Ollama responses."""
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 async def _ollama_stream_chat(
@@ -260,12 +259,12 @@ async def _ollama_stream_chat(
     provider = _load_provider_config(request.app)
     if provider and provider.get("baseUrl"):
         try:
-            from langchain_openai import ChatOpenAI
             from langchain_core.messages import (
                 AIMessage,
                 HumanMessage,
                 SystemMessage,
             )
+            from langchain_openai import ChatOpenAI
 
             llm = ChatOpenAI(
                 base_url=provider["baseUrl"],
@@ -350,12 +349,12 @@ async def _ollama_collect_chat(
     provider = _load_provider_config(request.app)
     if provider and provider.get("baseUrl"):
         try:
-            from langchain_openai import ChatOpenAI
             from langchain_core.messages import (
                 AIMessage,
                 HumanMessage,
                 SystemMessage,
             )
+            from langchain_openai import ChatOpenAI
 
             llm = ChatOpenAI(
                 base_url=provider["baseUrl"],
@@ -453,8 +452,8 @@ async def ollama_generate(request: web.Request) -> web.StreamResponse | web.Resp
     provider = _load_provider_config(request.app)
     if provider and provider.get("baseUrl"):
         try:
-            from langchain_openai import ChatOpenAI
             from langchain_core.messages import HumanMessage, SystemMessage
+            from langchain_openai import ChatOpenAI
 
             llm = ChatOpenAI(
                 base_url=provider["baseUrl"],
@@ -636,8 +635,8 @@ async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
                 provider = _load_provider_config(request.app)
                 if provider and provider.get("baseUrl"):
                     try:
-                        from langchain_openai import ChatOpenAI
                         from langchain_core.messages import HumanMessage, SystemMessage
+                        from langchain_openai import ChatOpenAI
 
                         llm = ChatOpenAI(
                             base_url=provider["baseUrl"],

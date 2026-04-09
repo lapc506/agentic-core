@@ -5,8 +5,8 @@ model steering, and todo tracker.
 
 from __future__ import annotations
 
-import pytest
-
+from agentic_core.application.services.context_imports import ContextImportResolver
+from agentic_core.application.services.model_steering import ModelSteeringService
 from agentic_core.application.services.policy_engine import (
     Decision,
     PolicyEngine,
@@ -14,11 +14,8 @@ from agentic_core.application.services.policy_engine import (
     Priority,
 )
 from agentic_core.application.services.skill_disclosure import SkillDisclosureService
-from agentic_core.application.services.tool_masking import ToolOutputMasker
-from agentic_core.application.services.context_imports import ContextImportResolver
-from agentic_core.application.services.model_steering import ModelSteeringService
 from agentic_core.application.services.todo_tracker import TodoTracker
-
+from agentic_core.application.services.tool_masking import ToolOutputMasker
 
 # ---------------------------------------------------------------------------
 # PolicyEngine
@@ -217,7 +214,7 @@ def test_masker_per_tool_config_overrides_default() -> None:
 def test_context_imports_resolve_file(tmp_path) -> None:
     child = tmp_path / "child.md"
     child.write_text("# Child content")
-    parent_content = f"@child.md"
+    parent_content = "@child.md"
     resolver = ContextImportResolver(base_dir=str(tmp_path))
     result = resolver.resolve(parent_content)
     assert "# Child content" in result

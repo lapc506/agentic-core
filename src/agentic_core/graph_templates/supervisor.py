@@ -20,7 +20,7 @@ class SupervisorGraphTemplate(BaseAgentGraph):
 
     def build_graph(self) -> Any:
         try:
-            from langgraph.graph import StateGraph, END
+            from langgraph.graph import END, StateGraph
 
             graph = StateGraph(SupervisorState)
             graph.add_node("route", self._route)

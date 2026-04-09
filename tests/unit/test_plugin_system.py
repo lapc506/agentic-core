@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from agentic_core.application.services.plugin_system import (
-    Plugin,
     PluginManifest,
     PluginRegistry,
     PluginState,
@@ -34,7 +33,7 @@ def test_manifest_frozen() -> None:
     m = _make_manifest()
     try:
         m.name = "other"  # type: ignore[misc]
-        assert False, "Should have raised"
+        raise AssertionError("Should have raised")
     except Exception:
         pass
 

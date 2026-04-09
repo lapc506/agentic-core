@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from agentic_core.application.ports.tool import ToolPort
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from agentic_core.application.ports.tool import ToolPort
 
 
 class ListToolsQuery:

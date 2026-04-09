@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING, Any, TypedDict
 from agentic_core.graph_templates.base import BaseAgentGraph
 
 if TYPE_CHECKING:
-    from langchain_core.messages import BaseMessage
 
     from agentic_core.application.ports.tool import ToolPort
     from agentic_core.domain.entities.persona import Persona

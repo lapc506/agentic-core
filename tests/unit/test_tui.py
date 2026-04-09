@@ -9,7 +9,6 @@ from agentic_core.adapters.primary.tui import (
     TUIState,
 )
 
-
 # ── Panel enum ──────────────────────────────────────────────────
 
 

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from agentic_core.shared_kernel.events import DomainEvent, EventBus
 
@@ -15,7 +15,7 @@ async def test_publish_calls_handler():
         received.append(event)
 
     bus.subscribe(FakeEvent, handler)
-    evt = FakeEvent(data="hello", timestamp=datetime.now(timezone.utc))
+    evt = FakeEvent(data="hello", timestamp=datetime.now(UTC))
     await bus.publish(evt)
     assert len(received) == 1
     assert received[0].data == "hello"  # type: ignore[attr-defined]
@@ -33,7 +33,7 @@ async def test_multiple_subscribers():
 
     bus.subscribe(FakeEvent, h1)
     bus.subscribe(FakeEvent, h2)
-    await bus.publish(FakeEvent(data="x", timestamp=datetime.now(timezone.utc)))
+    await bus.publish(FakeEvent(data="x", timestamp=datetime.now(UTC)))
     assert calls == ["h1", "h2"]
 
 
@@ -49,13 +49,13 @@ async def test_error_does_not_block_next_handler():
 
     bus.subscribe(FakeEvent, bad)
     bus.subscribe(FakeEvent, good)
-    await bus.publish(FakeEvent(data="x", timestamp=datetime.now(timezone.utc)))
+    await bus.publish(FakeEvent(data="x", timestamp=datetime.now(UTC)))
     assert calls == ["ok"]
 
 
 async def test_no_subscribers():
     bus = EventBus()
-    await bus.publish(FakeEvent(data="lonely", timestamp=datetime.now(timezone.utc)))
+    await bus.publish(FakeEvent(data="lonely", timestamp=datetime.now(UTC)))
 
 
 async def test_unrelated_event_not_dispatched():
@@ -69,5 +69,5 @@ async def test_unrelated_event_not_dispatched():
         received.append(event)
 
     bus.subscribe(FakeEvent, handler)
-    await bus.publish(OtherEvent(value=42, timestamp=datetime.now(timezone.utc)))
+    await bus.publish(OtherEvent(value=42, timestamp=datetime.now(UTC)))
     assert len(received) == 0

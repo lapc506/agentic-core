@@ -1,13 +1,14 @@
 """Recovery recipes — automatic recovery for common agent failure scenarios."""
 from __future__ import annotations
+
 import logging
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 
 
-class FailureScenario(str, Enum):
+class FailureScenario(StrEnum):
     TRUST_PROMPT = "trust_prompt_unresolved"
     PROMPT_MISDELIVERY = "prompt_misdelivery"
     STALE_BRANCH = "stale_branch"
@@ -17,7 +18,7 @@ class FailureScenario(str, Enum):
     PROVIDER_FAILURE = "provider_failure"
 
 
-class RecoveryAction(str, Enum):
+class RecoveryAction(StrEnum):
     ACCEPT_TRUST = "accept_trust_prompt"
     REDIRECT_PROMPT = "redirect_prompt_to_agent"
     REBASE_BRANCH = "rebase_branch"

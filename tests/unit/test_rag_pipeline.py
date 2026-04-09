@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
 
 from agentic_core.application.ports.embedding_store import SearchResult
-from agentic_core.domain.enums import EmbeddingTaskType
 from agentic_core.domain.value_objects.multimodal import MultimodalContent
 from agentic_core.rag.pipeline import Document, RAGPipeline, UnsupportedModalityError
 

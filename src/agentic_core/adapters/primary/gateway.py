@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import ClassVar
 
@@ -52,7 +52,7 @@ class InboundMessage(BaseModel, frozen=True):
     user_id: str
     content: str
     media_url: str | None = None
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class OutboundMessage(BaseModel, frozen=True):

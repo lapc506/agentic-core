@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-import asyncio
 import json
-from collections.abc import AsyncIterator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 import websockets
 
 from agentic_core.adapters.primary.websocket import WebSocketTransport
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 @pytest.fixture

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from agentic_core.application.hooks import (
-    Hook,
     HookContext,
     HookEvent,
     HookRegistry,

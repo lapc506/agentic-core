@@ -33,7 +33,7 @@ def test_skill_definition_frozen() -> None:
     s = _make_skill()
     try:
         s.name = "other"  # type: ignore[misc]
-        assert False, "Should have raised"
+        raise AssertionError("Should have raised")
     except Exception:
         pass
 

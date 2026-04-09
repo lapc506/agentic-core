@@ -1,8 +1,10 @@
-from google.protobuf.internal import containers as _containers
+from collections.abc import Iterable as _Iterable
+from collections.abc import Mapping as _Mapping
+from typing import ClassVar as _ClassVar
+
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from collections.abc import Iterable as _Iterable, Mapping as _Mapping
-from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
+from google.protobuf.internal import containers as _containers
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -22,7 +24,7 @@ class AgentRequest(_message.Message):
     content: str
     user_id: str
     trace_id: str
-    def __init__(self, session_id: _Optional[str] = ..., persona_id: _Optional[str] = ..., content: _Optional[str] = ..., user_id: _Optional[str] = ..., trace_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, session_id: str | None = ..., persona_id: str | None = ..., content: str | None = ..., user_id: str | None = ..., trace_id: str | None = ...) -> None: ...
 
 class CreateSessionRequest(_message.Message):
     __slots__ = ("persona_id", "user_id")
@@ -30,13 +32,13 @@ class CreateSessionRequest(_message.Message):
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     persona_id: str
     user_id: str
-    def __init__(self, persona_id: _Optional[str] = ..., user_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, persona_id: str | None = ..., user_id: str | None = ...) -> None: ...
 
 class GetSessionRequest(_message.Message):
     __slots__ = ("session_id",)
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     session_id: str
-    def __init__(self, session_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, session_id: str | None = ...) -> None: ...
 
 class HumanResponse(_message.Message):
     __slots__ = ("session_id", "content")
@@ -44,7 +46,7 @@ class HumanResponse(_message.Message):
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     session_id: str
     content: str
-    def __init__(self, session_id: _Optional[str] = ..., content: _Optional[str] = ...) -> None: ...
+    def __init__(self, session_id: str | None = ..., content: str | None = ...) -> None: ...
 
 class SessionInfo(_message.Message):
     __slots__ = ("session_id", "persona_id", "user_id", "state", "created_at")
@@ -58,13 +60,13 @@ class SessionInfo(_message.Message):
     user_id: str
     state: str
     created_at: str
-    def __init__(self, session_id: _Optional[str] = ..., persona_id: _Optional[str] = ..., user_id: _Optional[str] = ..., state: _Optional[str] = ..., created_at: _Optional[str] = ...) -> None: ...
+    def __init__(self, session_id: str | None = ..., persona_id: str | None = ..., user_id: str | None = ..., state: str | None = ..., created_at: str | None = ...) -> None: ...
 
 class PersonaList(_message.Message):
     __slots__ = ("personas",)
     PERSONAS_FIELD_NUMBER: _ClassVar[int]
     personas: _containers.RepeatedCompositeFieldContainer[PersonaInfo]
-    def __init__(self, personas: _Optional[_Iterable[_Union[PersonaInfo, _Mapping]]] = ...) -> None: ...
+    def __init__(self, personas: _Iterable[PersonaInfo | _Mapping] | None = ...) -> None: ...
 
 class PersonaInfo(_message.Message):
     __slots__ = ("name", "role", "description", "graph_template")
@@ -76,7 +78,7 @@ class PersonaInfo(_message.Message):
     role: str
     description: str
     graph_template: str
-    def __init__(self, name: _Optional[str] = ..., role: _Optional[str] = ..., description: _Optional[str] = ..., graph_template: _Optional[str] = ...) -> None: ...
+    def __init__(self, name: str | None = ..., role: str | None = ..., description: str | None = ..., graph_template: str | None = ...) -> None: ...
 
 class HealthStatus(_message.Message):
     __slots__ = ("healthy", "version", "active_sessions")
@@ -86,7 +88,7 @@ class HealthStatus(_message.Message):
     healthy: bool
     version: str
     active_sessions: int
-    def __init__(self, healthy: bool = ..., version: _Optional[str] = ..., active_sessions: _Optional[int] = ...) -> None: ...
+    def __init__(self, healthy: bool = ..., version: str | None = ..., active_sessions: int | None = ...) -> None: ...
 
 class AgentResponse(_message.Message):
     __slots__ = ("token", "end", "escalation", "audio", "error")
@@ -100,7 +102,7 @@ class AgentResponse(_message.Message):
     escalation: HumanEscalation
     audio: AudioChunk
     error: ErrorDetail
-    def __init__(self, token: _Optional[_Union[StreamToken, _Mapping]] = ..., end: _Optional[_Union[StreamEnd, _Mapping]] = ..., escalation: _Optional[_Union[HumanEscalation, _Mapping]] = ..., audio: _Optional[_Union[AudioChunk, _Mapping]] = ..., error: _Optional[_Union[ErrorDetail, _Mapping]] = ...) -> None: ...
+    def __init__(self, token: StreamToken | _Mapping | None = ..., end: StreamEnd | _Mapping | None = ..., escalation: HumanEscalation | _Mapping | None = ..., audio: AudioChunk | _Mapping | None = ..., error: ErrorDetail | _Mapping | None = ...) -> None: ...
 
 class StreamToken(_message.Message):
     __slots__ = ("session_id", "token")
@@ -108,13 +110,13 @@ class StreamToken(_message.Message):
     TOKEN_FIELD_NUMBER: _ClassVar[int]
     session_id: str
     token: str
-    def __init__(self, session_id: _Optional[str] = ..., token: _Optional[str] = ...) -> None: ...
+    def __init__(self, session_id: str | None = ..., token: str | None = ...) -> None: ...
 
 class StreamEnd(_message.Message):
     __slots__ = ("session_id",)
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     session_id: str
-    def __init__(self, session_id: _Optional[str] = ...) -> None: ...
+    def __init__(self, session_id: str | None = ...) -> None: ...
 
 class HumanEscalation(_message.Message):
     __slots__ = ("session_id", "prompt")
@@ -122,7 +124,7 @@ class HumanEscalation(_message.Message):
     PROMPT_FIELD_NUMBER: _ClassVar[int]
     session_id: str
     prompt: str
-    def __init__(self, session_id: _Optional[str] = ..., prompt: _Optional[str] = ...) -> None: ...
+    def __init__(self, session_id: str | None = ..., prompt: str | None = ...) -> None: ...
 
 class AudioChunk(_message.Message):
     __slots__ = ("session_id", "data")
@@ -130,7 +132,7 @@ class AudioChunk(_message.Message):
     DATA_FIELD_NUMBER: _ClassVar[int]
     session_id: str
     data: bytes
-    def __init__(self, session_id: _Optional[str] = ..., data: _Optional[bytes] = ...) -> None: ...
+    def __init__(self, session_id: str | None = ..., data: bytes | None = ...) -> None: ...
 
 class ErrorDetail(_message.Message):
     __slots__ = ("session_id", "code", "message")
@@ -140,4 +142,4 @@ class ErrorDetail(_message.Message):
     session_id: str
     code: str
     message: str
-    def __init__(self, session_id: _Optional[str] = ..., code: _Optional[str] = ..., message: _Optional[str] = ...) -> None: ...
+    def __init__(self, session_id: str | None = ..., code: str | None = ..., message: str | None = ...) -> None: ...

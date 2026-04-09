@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import time
+from typing import TYPE_CHECKING
 
 from agentic_core.application.middleware.base import (
     Middleware,
     NextHandler,
     RequestContext,
 )
-from agentic_core.application.ports.metrics import MetricsPort
-from agentic_core.domain.value_objects.messages import AgentMessage
+
+if TYPE_CHECKING:
+    from agentic_core.application.ports.metrics import MetricsPort
+    from agentic_core.domain.value_objects.messages import AgentMessage
 
 
 class MetricsMiddleware(Middleware):

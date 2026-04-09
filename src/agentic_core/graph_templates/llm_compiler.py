@@ -17,7 +17,7 @@ class LLMCompilerState(TypedDict, total=False):
 class LLMCompilerGraphTemplate(BaseAgentGraph):
     def build_graph(self) -> Any:
         try:
-            from langgraph.graph import StateGraph, END
+            from langgraph.graph import END, StateGraph
 
             graph = StateGraph(LLMCompilerState)
             graph.add_node("plan_dag", self._plan_dag)

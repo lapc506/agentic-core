@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentic_core.application.ports.embedding_provider import EmbeddingProviderPort
-from agentic_core.config.settings import EmbeddingProviderSettings
-from agentic_core.domain.enums import EmbeddingTaskType
-from agentic_core.domain.value_objects.multimodal import MultimodalContent
+
+if TYPE_CHECKING:
+    from agentic_core.config.settings import EmbeddingProviderSettings
+    from agentic_core.domain.enums import EmbeddingTaskType
+    from agentic_core.domain.value_objects.multimodal import MultimodalContent
 
 logger = logging.getLogger(__name__)
 

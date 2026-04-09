@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import uuid_utils
 
 from agentic_core.application.middleware.base import (
@@ -7,8 +9,10 @@ from agentic_core.application.middleware.base import (
     NextHandler,
     RequestContext,
 )
-from agentic_core.application.ports.tracing import TracingPort
-from agentic_core.domain.value_objects.messages import AgentMessage
+
+if TYPE_CHECKING:
+    from agentic_core.application.ports.tracing import TracingPort
+    from agentic_core.domain.value_objects.messages import AgentMessage
 
 
 class TracingMiddleware(Middleware):
