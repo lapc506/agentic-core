@@ -569,8 +569,38 @@ async def ollama_show(request: web.Request) -> web.Response:
 # ---------------------------------------------------------------------------
 
 
+def _get_allowed_origins(app: web.Application) -> list[str]:
+    """Get allowed WebSocket origins (CVE-2026-25253 mitigation)."""
+    origins = [
+        "http://localhost",
+        "http://127.0.0.1",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+    ]
+    settings = app.get("settings")
+    if settings and isinstance(settings, dict):
+        port = settings.get("http_port")
+        if port:
+            origins.extend([f"http://localhost:{port}", f"http://127.0.0.1:{port}"])
+    elif settings and hasattr(settings, "http_port"):
+        port = settings.http_port
+        origins.extend([f"http://localhost:{port}", f"http://127.0.0.1:{port}"])
+    extra = os.environ.get("AGENTIC_ALLOWED_ORIGINS", "")
+    if extra:
+        origins.extend(o.strip() for o in extra.split(",") if o.strip())
+    return origins
+
+
 async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
-    """Handle WebSocket connections using aiohttp (same port as HTTP)."""
+    """Handle WebSocket connections with origin validation."""
+    # --- Origin validation (CVE-2026-25253 mitigation) ---
+    origin = request.headers.get("Origin", "")
+    if origin:
+        allowed = _get_allowed_origins(request.app)
+        if not any(origin.startswith(a) for a in allowed):
+            _log.warning("WebSocket connection rejected: unauthorized origin %s", origin)
+            return web.Response(status=403, text="Forbidden: unauthorized origin")
+
     ws = web.WebSocketResponse()
     await ws.prepare(request)
 

@@ -152,3 +152,46 @@ async def test_create_session_no_persona(transport: WebSocketTransport):
         resp = json.loads(await ws.recv())
         assert resp["type"] == "error"
         assert resp["code"] == "invalid_persona"
+
+
+# ---------------------------------------------------------------------------
+# Origin validation tests (CVE-2026-25253 mitigation)
+# ---------------------------------------------------------------------------
+
+
+async def test_connection_rejected_for_bad_origin(transport: WebSocketTransport):
+    """Connections from unauthorized origins are closed immediately."""
+    try:
+        async with websockets.connect(
+            _url(transport),
+            additional_headers={"Origin": "https://evil.attacker.com"},
+        ) as ws:
+            # Server should close the connection with code 4003
+            await ws.recv()
+            pytest.fail("Expected connection to be closed")
+    except websockets.ConnectionClosed as exc:
+        assert exc.rcvd.code == 4003
+
+
+async def test_connection_allowed_for_localhost_origin(transport: WebSocketTransport):
+    """Connections from localhost origin are allowed."""
+    port = transport._actual_port
+    async with websockets.connect(
+        _url(transport),
+        additional_headers={"Origin": f"http://127.0.0.1:{port}"},
+    ) as ws:
+        await ws.send(json.dumps({
+            "type": "create_session", "persona_id": "support", "user_id": "u1",
+        }))
+        resp = json.loads(await ws.recv())
+        assert resp["type"] == "session_created"
+
+
+async def test_connection_allowed_when_no_origin(transport: WebSocketTransport):
+    """Connections without an Origin header (e.g. CLI tools) are allowed."""
+    async with websockets.connect(_url(transport)) as ws:
+        await ws.send(json.dumps({
+            "type": "create_session", "persona_id": "support", "user_id": "u1",
+        }))
+        resp = json.loads(await ws.recv())
+        assert resp["type"] == "session_created"

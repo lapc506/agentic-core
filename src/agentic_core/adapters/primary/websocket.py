@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 from collections.abc import AsyncIterator, Callable, Awaitable
 from dataclasses import dataclass, field
 from typing import Any
@@ -71,6 +72,19 @@ class WebSocketTransport:
         self.on_human_response: OnHumanResponse | None = None
         self.on_close_session: OnCloseSession | None = None
 
+    def _get_allowed_origins(self) -> list[str]:
+        """Return the list of allowed WebSocket origins."""
+        allowed = [
+            "http://localhost",
+            "http://127.0.0.1",
+            f"http://localhost:{self._port}",
+            f"http://127.0.0.1:{self._port}",
+        ]
+        extra = os.environ.get("AGENTIC_ALLOWED_ORIGINS", "")
+        if extra:
+            allowed.extend(o.strip() for o in extra.split(",") if o.strip())
+        return allowed
+
     async def start(self) -> None:
         self._server = await websockets.serve(
             self._handle_connection,
@@ -92,6 +106,14 @@ class WebSocketTransport:
         return self._server is not None and self._server.is_serving()
 
     async def _handle_connection(self, ws: ServerConnection) -> None:
+        # --- Origin validation (CVE-2026-25253 mitigation) ---
+        origin = ws.request.headers.get("Origin", "") if ws.request else ""
+        if origin:
+            allowed = self._get_allowed_origins()
+            if not any(origin.startswith(a) for a in allowed):
+                logger.warning("WebSocket connection rejected: unauthorized origin %s", origin)
+                await ws.close(4003, "Forbidden: unauthorized origin")
+                return
         state = ConnectionState(max_sessions=self._max_sessions)
         try:
             async for raw in ws:

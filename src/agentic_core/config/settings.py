@@ -79,6 +79,7 @@ class AgenticSettings(BaseSettings):
     # Security
     rate_limit_rpm: int = 60
     pii_redaction_enabled: bool = True
+    allowed_origins: str = ""  # Comma-separated list of allowed WebSocket origins
 
     # Personas
     personas_dir: str = "agents/"

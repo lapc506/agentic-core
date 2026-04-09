@@ -24,6 +24,7 @@ class SecurityAuditor:
         self._check_rate_limits(config, findings)
         self._check_pii(config, findings)
         self._check_secrets(config, findings)
+        self._check_websocket_origins(config, findings)
         return findings
 
     def _check_auth(self, config: dict, findings: list[AuditFinding]) -> None:
@@ -49,3 +50,11 @@ class SecurityAuditor:
             val = config.get(key, "")
             if "password" in val.lower() and "@" in val:
                 findings.append(AuditFinding("secrets", Severity.INFO, f"Credentials in {key} connection string", "Use environment variables for secrets"))
+
+    def _check_websocket_origins(self, config: dict, findings: list[AuditFinding]) -> None:
+        if not config.get("allowed_origins"):
+            findings.append(AuditFinding(
+                "websocket_origins", Severity.WARNING,
+                "No custom allowed origins configured for WebSocket",
+                "Set AGENTIC_ALLOWED_ORIGINS for production deployments",
+            ))
