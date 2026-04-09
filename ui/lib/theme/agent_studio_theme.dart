@@ -31,40 +31,54 @@ class AgentStudioTheme {
   static const gateBlue = Color(0xFF3B6FE0);
   static const gateRed = Color(0xFFEF5350);
 
+  // Light theme surfaces (balanced — sidebar stays dark, content is warm light)
+  static const lightRail = Color(0xFF1E2030);      // Dark sidebar (keeps brand feel)
+  static const lightPanel = Color(0xFF252840);      // Slightly lighter panel
+  static const lightContent = Color(0xFFF8F9FC);    // Warm light content
+  static const lightCard = Color(0xFFFFFFFF);        // White cards
+  static const lightBorder = Color(0xFFDDE0E8);      // Subtle borders
+  static const lightTextPrimary = Color(0xFF2A2D3E); // Near-black text
+  static const lightTextSecondary = Color(0xFF6B7080); // Medium gray
+
   static ThemeData get lightTheme {
     return ThemeData.light(useMaterial3: true).copyWith(
-      scaffoldBackgroundColor: const Color(0xFFF5F5FA),
+      scaffoldBackgroundColor: lightContent,
       colorScheme: const ColorScheme.light(
         primary: primary,
-        surface: Color(0xFFFFFFFF),
-        onSurface: Color(0xFF1A1A2E),
-        outline: Color(0xFFD0D0E0),
+        surface: lightCard,
+        onSurface: lightTextPrimary,
+        outline: lightBorder,
       ),
-      textTheme: GoogleFonts.ubuntuTextTheme(ThemeData.light().textTheme),
-      dividerColor: const Color(0xFFD0D0E0),
+      textTheme: GoogleFonts.ubuntuTextTheme(ThemeData.light().textTheme).apply(
+        bodyColor: lightTextPrimary,
+        displayColor: lightTextPrimary,
+      ),
+      dividerColor: lightBorder,
       cardTheme: const CardThemeData(
-        color: Color(0xFFFFFFFF),
-        elevation: 0,
+        color: lightCard,
+        elevation: 1,
+        shadowColor: Color(0x10000000),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(8)),
-          side: BorderSide(color: Color(0xFFD0D0E0)),
+          side: BorderSide(color: lightBorder),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFFF0F0F8),
+        fillColor: const Color(0xFFF0F2F8),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: Color(0xFFD0D0E0)),
+          borderSide: const BorderSide(color: lightBorder),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: Color(0xFFD0D0E0)),
+          borderSide: const BorderSide(color: lightBorder),
         ),
+        hintStyle: const TextStyle(color: lightTextSecondary),
       ),
       tabBarTheme: const TabBarThemeData(
         labelColor: primary,
-        unselectedLabelColor: Color(0xFF888899),
+        unselectedLabelColor: lightTextSecondary,
         indicatorColor: primary,
       ),
     );

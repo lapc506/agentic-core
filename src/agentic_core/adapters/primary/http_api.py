@@ -773,6 +773,10 @@ async def cors_middleware(
     appropriate headers; all other requests are forwarded to the handler
     and the CORS headers are attached to the response.
     """
+    # Skip CORS for WebSocket upgrade requests
+    if request.path == "/ws" or request.headers.get("Upgrade", "").lower() == "websocket":
+        return await handler(request)
+
     if request.method == "OPTIONS":
         response = web.Response()
     else:
