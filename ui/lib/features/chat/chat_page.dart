@@ -35,6 +35,13 @@ class _ChatPageState extends State<ChatPage> {
     try {
       final agents = await _apiClient.listAgents();
       setState(() => _agents = agents);
+      // Auto-select first agent if only one exists (or default)
+      if (agents.isNotEmpty && _selectedAgent == null) {
+        final slug = agents.first['slug'] as String?;
+        if (slug != null) {
+          _connectAndCreateSession(slug);
+        }
+      }
     } catch (_) {
       // Backend not available yet — that's OK for demo
     }

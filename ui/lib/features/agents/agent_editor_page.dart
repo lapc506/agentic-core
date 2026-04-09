@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/api_client.dart';
+import '../../services/soul_md_generator.dart';
 import '../../theme/agent_studio_theme.dart';
 import 'widgets/inputs_tab.dart';
 import 'widgets/guardrails_tab.dart';
@@ -66,6 +67,45 @@ class _AgentEditorPageState extends State<AgentEditorPage>
     super.dispose();
   }
 
+  void _exportSoulMd(BuildContext context) {
+    final soulMd = SoulMdGenerator.generate(_agent, _gates);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AgentStudioTheme.card,
+        title: const Text('SOUL.md Preview', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 16)),
+        content: SizedBox(
+          width: 600,
+          height: 400,
+          child: SingleChildScrollView(
+            child: SelectableText(
+              soulMd,
+              style: const TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 12, fontFamily: 'monospace', height: 1.6),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cerrar', style: TextStyle(color: AgentStudioTheme.textSecondary)),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              // TODO: Download file in future
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('SOUL.md copiado al clipboard')),
+              );
+            },
+            icon: const Icon(Icons.copy, size: 14),
+            label: const Text('Copiar'),
+            style: FilledButton.styleFrom(backgroundColor: AgentStudioTheme.primary),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -117,6 +157,16 @@ class _AgentEditorPageState extends State<AgentEditorPage>
                 ],
               ),
               const Spacer(),
+              OutlinedButton.icon(
+                onPressed: () => _exportSoulMd(context),
+                icon: const Icon(Icons.description, size: 14),
+                label: const Text('SOUL.md', style: TextStyle(fontSize: 12)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AgentStudioTheme.primary),
+                  foregroundColor: AgentStudioTheme.primary,
+                ),
+              ),
+              const SizedBox(width: 8),
               OutlinedButton(
                 onPressed: () {},
                 style: OutlinedButton.styleFrom(

@@ -87,6 +87,80 @@ class _ConnectionsTab extends StatelessWidget {
         _statusRow('PostgreSQL', 'postgresql://agentic@postgres:5432/agentic', true),
         _statusRow('FalkorDB', 'redis://falkordb:6380', true),
         _statusRow('MCP Bridge', 'Not configured', false),
+        const SizedBox(height: 24),
+        const Text('RATE LIMITS', style: TextStyle(color: AgentStudioTheme.primary, fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1)),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AgentStudioTheme.card,
+            border: Border.all(color: AgentStudioTheme.border),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Column(
+            children: [
+              Row(children: [
+                Text('Queries/minuto', style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12)),
+                Spacer(),
+                Text('10', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.bold)),
+              ]),
+              SizedBox(height: 8),
+              Row(children: [
+                Text('Queries/hora', style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12)),
+                Spacer(),
+                Text('120', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.bold)),
+              ]),
+              SizedBox(height: 8),
+              Row(children: [
+                Text('Queries/día', style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12)),
+                Spacer(),
+                Text('1000', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.bold)),
+              ]),
+              Divider(height: 24, color: AgentStudioTheme.border),
+              Row(children: [
+                Text('Circuit breaker', style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12)),
+                Spacer(),
+                Text('3 consecutive / 5 in window → 60s cooldown', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 11)),
+              ]),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        const Text('COMPLIANCE', style: TextStyle(color: AgentStudioTheme.primary, fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1)),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AgentStudioTheme.card,
+            border: Border.all(color: AgentStudioTheme.border),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            children: [
+              Row(children: [
+                const Icon(Icons.check_circle, size: 14, color: AgentStudioTheme.success),
+                const SizedBox(width: 8),
+                const Text('AI Disclosure', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 13)),
+                const Spacer(),
+                Switch(value: true, onChanged: null, activeColor: AgentStudioTheme.success),
+              ]),
+              Row(children: [
+                const Icon(Icons.check_circle, size: 14, color: AgentStudioTheme.success),
+                const SizedBox(width: 8),
+                const Text('Destructive Confirmation', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 13)),
+                const Spacer(),
+                Switch(value: true, onChanged: null, activeColor: AgentStudioTheme.success),
+              ]),
+              Row(children: [
+                const Icon(Icons.check_circle, size: 14, color: AgentStudioTheme.success),
+                const SizedBox(width: 8),
+                const Text('High-Risk Domain Refusal', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 13)),
+                const Spacer(),
+                Switch(value: true, onChanged: null, activeColor: AgentStudioTheme.success),
+              ]),
+            ],
+          ),
+        ),
       ],
     );
   }

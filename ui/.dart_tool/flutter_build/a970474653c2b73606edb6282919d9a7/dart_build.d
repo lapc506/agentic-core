@@ -1,0 +1,1 @@
+ /home/kvttvrsis/Documentos/GitHub/agentic-core/ui/.dart_tool/flutter_build/a970474653c2b73606edb6282919d9a7/dart_build_result.json:  /home/kvttvrsis/Documentos/GitHub/agentic-core/ui/.dart_tool/package_config.json /home/kvttvrsis/Documentos/GitHub/agentic-core/ui/pubspec.yaml /home/kvttvrsis/flutter/bin/cache/dart-sdk/version

@@ -1,0 +1,67 @@
+{
+  "onboarded": false,
+  "providers": [
+    {
+      "name": "OpenRouter (free tier)",
+      "type": "openai",
+      "model": "meta-llama/llama-3.2-3b-instruct:free",
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "apiKey": "",
+      "status": "default"
+    }
+  ],
+  "default_agent": {
+    "name": "Asistente Demo",
+    "role": "assistant",
+    "description": "Agente de demostración del Agent Studio.",
+    "bio": "Un asistente versátil que demuestra las capacidades de agentic-core.",
+    "lore": "Creado como el primer agente de demostración del Agent Studio.",
+    "style": "Profesional",
+    "vocabulary": "Lenguaje claro y directo. Responder en el idioma del usuario.",
+    "graph_template": "react",
+    "tools": [],
+    "system_prompt": "Eres un asistente útil y profesional. Responde en el idioma del usuario.",
+    "boundaries": [
+      "No proporcionar asesoría legal, médica ni financiera",
+      "No ejecutar código ni acceder al sistema de archivos",
+      "No revelar nombres internos de herramientas ni tablas",
+      "No generar contenido que viole las políticas de uso de Anthropic"
+    ],
+    "evaluators": [
+      {
+        "name": "Language Match",
+        "content": "Verificar que la respuesta está en el mismo idioma que el mensaje del usuario.",
+        "action": "rewrite",
+        "order": 0
+      }
+    ],
+    "context_providers": ["session_history"],
+    "memory": {
+      "enabled": true,
+      "categories": ["preferences", "goals", "skills", "context"],
+      "maxMemories": 100,
+      "similarityThreshold": 0.9
+    }
+  },
+  "rate_limits": {
+    "queries_per_minute": 10,
+    "queries_per_hour": 120,
+    "queries_per_day": 1000
+  },
+  "circuit_breaker": {
+    "consecutive_failures": 3,
+    "window_failures": 5,
+    "cooldown_seconds": 60
+  },
+  "llm_judge": {
+    "enabled": false,
+    "mode": "observe",
+    "sample_rate": 1.0,
+    "timeout_ms": 5000
+  },
+  "compliance": {
+    "ai_disclosure": true,
+    "destructive_confirmation": true,
+    "high_risk_refusal": true
+  }
+}
