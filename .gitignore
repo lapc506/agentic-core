@@ -13,3 +13,4 @@ htmlcov/
 .superpowers/
 ui/.dart_tool/
 ui/.flutter-plugins-dependencies
+.claude/
