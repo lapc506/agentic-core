@@ -37,6 +37,33 @@ clean:
 	podman rmi agentic-core 2>/dev/null || true
 	rm -rf ui/build/
 
+# --- Desktop App (Linux) ---
+
+build-desktop:
+	cd ui && flutter build linux --release
+
+desktop: build-docker
+	@echo "Starting backend services..."
+	podman compose up -d
+	@echo "Waiting for backend..."
+	@sleep 3
+	@echo "Launching Agent Studio Desktop..."
+	cd ui && ./build/linux/x64/release/bundle/agent_studio
+
+desktop-dev:
+	@echo "Starting backend services..."
+	podman compose up -d
+	@echo "Launching Flutter Desktop (hot reload)..."
+	cd ui && flutter run -d linux
+
+# --- TUI ---
+
+tui:
+	cd tui && go run . --url http://localhost:8080
+
+tui-build:
+	cd tui && go build -o agentic-tui .
+
 # --- Documentation ---
 
 docs-site:
