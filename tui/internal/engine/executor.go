@@ -34,6 +34,9 @@ func NewExecutor(session *SessionManager, detector *CompletionDetector, events c
 }
 
 func (e *Executor) Start(ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	s := e.session.Current()
 	if s == nil {
 		return fmt.Errorf("no session loaded")
