@@ -1,10 +1,11 @@
-# Standalone Agent Studio — docker compose up → localhost:8765
+# Standalone Agent Studio — docker compose up → localhost:8080
 services:
   agentic-core:
     build:
       context: .
       dockerfile: deployment/docker/Dockerfile
     ports:
+      - "8080:8080"
       - "8765:8765"
     environment:
       AGENTIC_MODE: standalone

@@ -84,7 +84,7 @@ class AgenticSettings(BaseSettings):
     personas_dir: str = "agents/"
 
     # Standalone HTTP (REST + static)
-    http_port: int = 8765
+    http_port: int = 8080
     static_dir: str = "/app/web"
     api_enabled: bool = True
 

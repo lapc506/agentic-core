@@ -223,3 +223,19 @@ class AgentRuntime:
     @property
     def event_bus(self) -> EventBus:
         return self._event_bus
+
+
+async def _main() -> None:
+    settings = AgenticSettings()
+    runtime = AgentRuntime(settings)
+    await runtime.start()
+    try:
+        await asyncio.Event().wait()  # Run forever
+    except (KeyboardInterrupt, SystemExit):
+        pass
+    finally:
+        await runtime.stop()
+
+
+if __name__ == "__main__":
+    asyncio.run(_main())
