@@ -22,6 +22,7 @@ class _AgentEditorPageState extends State<AgentEditorPage>
   Map<String, dynamic> _agent = {};
   List<Map<String, dynamic>> _gates = [];
   bool _loading = true;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -53,12 +54,36 @@ class _AgentEditorPageState extends State<AgentEditorPage>
     }
   }
 
+  Future<void> _saveAgent() async {
+    setState(() => _saving = true);
+    try {
+      await _api.updateAgent(widget.agentSlug, _agent);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Agente guardado'), backgroundColor: AgentStudioTheme.success),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AgentStudioTheme.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Future<void> _saveGates(List<Map<String, dynamic>> gates) async {
     try {
       await _api.updateGates(widget.agentSlug, gates);
     } catch (_) {
       // Silently fail — offline-first approach
     }
+  }
+
+  void _onInputsChanged(Map<String, dynamic> updatedAgent) {
+    setState(() => _agent = updatedAgent);
   }
 
   @override
@@ -179,11 +204,16 @@ class _AgentEditorPageState extends State<AgentEditorPage>
               ),
               const SizedBox(width: 8),
               FilledButton(
-                onPressed: () {},
+                onPressed: _saving ? null : _saveAgent,
                 style: FilledButton.styleFrom(
                     backgroundColor: AgentStudioTheme.primary),
-                child:
-                    const Text('Guardar', style: TextStyle(fontSize: 12)),
+                child: _saving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Guardar', style: TextStyle(fontSize: 12)),
               ),
             ],
           ),
@@ -204,10 +234,10 @@ class _AgentEditorPageState extends State<AgentEditorPage>
           child: TabBarView(
             controller: _tabController,
             children: [
-              InputsTab(agent: _agent),
+              InputsTab(agent: _agent, onChanged: _onInputsChanged),
               GuardrailsTab(
                   gates: _gates, onGatesChanged: _saveGates),
-              const OutputsTab(),
+              OutputsTab(agent: _agent, onChanged: _onInputsChanged),
             ],
           ),
         ),

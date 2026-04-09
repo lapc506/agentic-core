@@ -52,11 +52,20 @@ class _GenUiChatPageState extends State<GenUiChatPage> {
 
   Future<void> _loadAgents() async {
     try {
-      final agents = await _apiClient.listAgents();
+      var agents = await _apiClient.listAgents();
+      if (agents.isEmpty) {
+        // Auto-create demo agent
+        await _apiClient.createAgent({
+          'name': 'Asistente Demo',
+          'role': 'assistant',
+          'description': 'Agente de demostración',
+          'graph_template': 'react',
+        });
+        agents = await _apiClient.listAgents();
+      }
       setState(() => _agents = agents);
       if (agents.isNotEmpty && _selectedAgent == null) {
-        final slug = agents.first['slug'] as String?;
-        if (slug != null) _selectAgent(slug);
+        _selectAgent(agents.first['slug'] as String);
       }
     } catch (_) {
       // Backend may not be available yet

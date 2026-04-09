@@ -17,22 +17,47 @@ class SidebarPanel extends StatelessWidget {
   }
 }
 
-class ChatPanelContent extends StatelessWidget {
+class ChatPanelContent extends StatefulWidget {
   const ChatPanelContent({super.key});
+
+  @override
+  State<ChatPanelContent> createState() => _ChatPanelContentState();
+}
+
+class _ChatPanelContentState extends State<ChatPanelContent> {
+  List<Map<String, dynamic>> _sessions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSessions();
+  }
+
+  Future<void> _loadSessions() async {
+    try {
+      // Sessions endpoint doesn't exist yet — gracefully degrade
+      // final sessions = await ApiClient().listSessions();
+      // setState(() => _sessions = sessions);
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionHeader('CONVERSACIONES'),
-        _panelItem('+ Nueva conversación', selected: true),
+        _panelItem('+ Nueva conversacion', selected: true),
         const SizedBox(height: 16),
         _sectionHeader('RECIENTES'),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Text('No hay conversaciones aún',
-            style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12, fontStyle: FontStyle.italic)),
-        ),
+        if (_sessions.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Text('No hay conversaciones aun',
+              style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12, fontStyle: FontStyle.italic)),
+          ),
+        for (final s in _sessions)
+          _panelItem(s['agent'] as String? ?? 'Session', subtitle: s['status'] as String? ?? ''),
       ],
     );
   }

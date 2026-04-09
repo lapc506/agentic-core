@@ -1,8 +1,40 @@
 import 'package:flutter/material.dart';
 import '../../../theme/agent_studio_theme.dart';
 
-class OutputsTab extends StatelessWidget {
-  const OutputsTab({super.key});
+class OutputsTab extends StatefulWidget {
+  const OutputsTab({super.key, this.agent = const {}, this.onChanged});
+  final Map<String, dynamic> agent;
+  final ValueChanged<Map<String, dynamic>>? onChanged;
+
+  @override
+  State<OutputsTab> createState() => _OutputsTabState();
+}
+
+class _OutputsTabState extends State<OutputsTab> {
+  late String _outputFormat;
+  late Set<String> _includedItems;
+  late Set<String> _activeChannels;
+
+  @override
+  void initState() {
+    super.initState();
+    _outputFormat = widget.agent['output_format'] as String? ?? 'Markdown';
+    _includedItems = Set<String>.from(
+      (widget.agent['output_includes'] as List?) ?? ['Fuentes', 'Confianza'],
+    );
+    _activeChannels = Set<String>.from(
+      (widget.agent['output_channels'] as List?) ?? ['WebSocket'],
+    );
+  }
+
+  void _notifyChanged() {
+    widget.onChanged?.call({
+      ...widget.agent,
+      'output_format': _outputFormat,
+      'output_includes': _includedItems.toList(),
+      'output_channels': _activeChannels.toList(),
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,11 +58,17 @@ class OutputsTab extends StatelessWidget {
                     .map(
                       (f) => ChoiceChip(
                         label: Text(f, style: const TextStyle(fontSize: 12)),
-                        selected: f == 'Markdown',
+                        selected: f == _outputFormat,
                         selectedColor: AgentStudioTheme.primary,
                         backgroundColor: AgentStudioTheme.card,
                         side: const BorderSide(
                             color: AgentStudioTheme.border),
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() => _outputFormat = f);
+                            _notifyChanged();
+                          }
+                        },
                       ),
                     )
                     .toList(),
@@ -42,36 +80,30 @@ class OutputsTab extends StatelessWidget {
               const SizedBox(height: 4),
               Wrap(
                 spacing: 8,
-                children: [
-                  FilterChip(
-                    label: const Text('Fuentes',
-                        style: TextStyle(fontSize: 12)),
-                    selected: true,
-                    onSelected: (_) {},
+                children: ['Fuentes', 'Confianza', 'Tool calls'].map((item) {
+                  final selected = _includedItems.contains(item);
+                  return FilterChip(
+                    label: Text(item,
+                        style: const TextStyle(fontSize: 12)),
+                    selected: selected,
+                    onSelected: (val) {
+                      setState(() {
+                        if (val) {
+                          _includedItems.add(item);
+                        } else {
+                          _includedItems.remove(item);
+                        }
+                      });
+                      _notifyChanged();
+                    },
                     selectedColor:
                         AgentStudioTheme.primary.withValues(alpha: 0.2),
-                    side: const BorderSide(
-                        color: AgentStudioTheme.primary),
-                  ),
-                  FilterChip(
-                    label: const Text('Confianza',
-                        style: TextStyle(fontSize: 12)),
-                    selected: true,
-                    onSelected: (_) {},
-                    selectedColor:
-                        AgentStudioTheme.primary.withValues(alpha: 0.2),
-                    side: const BorderSide(
-                        color: AgentStudioTheme.primary),
-                  ),
-                  FilterChip(
-                    label: const Text('Tool calls',
-                        style: TextStyle(fontSize: 12)),
-                    selected: false,
-                    onSelected: (_) {},
-                    side: const BorderSide(
-                        color: AgentStudioTheme.border),
-                  ),
-                ],
+                    side: BorderSide(
+                        color: selected
+                            ? AgentStudioTheme.primary
+                            : AgentStudioTheme.border),
+                  );
+                }).toList(),
               ),
             ],
           ),
@@ -85,10 +117,10 @@ class OutputsTab extends StatelessWidget {
             spacing: 12,
             runSpacing: 12,
             children: [
-              _channelTile(Icons.language, 'WebSocket', true),
-              _channelTile(Icons.send, 'Telegram', false),
-              _channelTile(Icons.chat, 'Slack', false),
-              _channelTile(Icons.mic, 'Voice', false),
+              _channelTile(Icons.language, 'WebSocket'),
+              _channelTile(Icons.send, 'Telegram'),
+              _channelTile(Icons.chat, 'Slack'),
+              _channelTile(Icons.mic, 'Voice'),
             ],
           ),
         ),
@@ -136,38 +168,51 @@ class OutputsTab extends StatelessWidget {
     );
   }
 
-  Widget _channelTile(IconData icon, String label, bool active) {
-    return Container(
-      width: 90,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AgentStudioTheme.content,
-        border: Border.all(
-            color:
-                active ? AgentStudioTheme.success : AgentStudioTheme.border),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Icon(icon,
-              size: 24,
-              color: active
-                  ? AgentStudioTheme.textPrimary
-                  : AgentStudioTheme.textSecondary),
-          const SizedBox(height: 4),
-          Text(label,
-              style: TextStyle(
-                  color: active
-                      ? AgentStudioTheme.textPrimary
-                      : AgentStudioTheme.textSecondary,
-                  fontSize: 11)),
-          Text(active ? 'Activo' : 'No config',
-              style: TextStyle(
-                  color: active
-                      ? AgentStudioTheme.success
-                      : AgentStudioTheme.textSecondary,
-                  fontSize: 9)),
-        ],
+  Widget _channelTile(IconData icon, String label) {
+    final active = _activeChannels.contains(label);
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (active) {
+            _activeChannels.remove(label);
+          } else {
+            _activeChannels.add(label);
+          }
+        });
+        _notifyChanged();
+      },
+      child: Container(
+        width: 90,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AgentStudioTheme.content,
+          border: Border.all(
+              color:
+                  active ? AgentStudioTheme.success : AgentStudioTheme.border),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          children: [
+            Icon(icon,
+                size: 24,
+                color: active
+                    ? AgentStudioTheme.textPrimary
+                    : AgentStudioTheme.textSecondary),
+            const SizedBox(height: 4),
+            Text(label,
+                style: TextStyle(
+                    color: active
+                        ? AgentStudioTheme.textPrimary
+                        : AgentStudioTheme.textSecondary,
+                    fontSize: 11)),
+            Text(active ? 'Activo' : 'No config',
+                style: TextStyle(
+                    color: active
+                        ? AgentStudioTheme.success
+                        : AgentStudioTheme.textSecondary,
+                    fontSize: 9)),
+          ],
+        ),
       ),
     );
   }
