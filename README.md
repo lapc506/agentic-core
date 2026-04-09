@@ -263,7 +263,103 @@ graph TD
     style DIRECT fill:#95A5A6,color:#fff
 ```
 
-## Quick Start
+## Standalone Demo (Docker / Podman)
+
+Run the full Agent Studio locally — zero configuration required:
+
+```bash
+git clone https://github.com/lapc506/agentic-core.git
+cd agentic-core
+docker compose up        # or: podman compose up
+```
+
+Open **http://localhost:8765** — you'll see the Agent Studio with:
+- Chat page (home) with agent selector and WebSocket streaming
+- Agent editor with tabs (Inputs / Guardrails / Outputs) and gate configuration
+- Sessions history, Tools health, Settings with debug terminal, Metrics dashboard
+
+### What runs
+
+| Container | Image | Port | Purpose |
+|-----------|-------|------|---------|
+| agentic-core | `ghcr.io/lapc506/agentic-core` | 8765 (exposed) | Python runtime + Flutter Web UI + REST API + WebSocket |
+| redis | `redis:7-alpine` | 6379 (internal) | Sessions, memory store |
+| postgres | `pgvector/pgvector:pg16` | 5432 (internal) | Agent persistence, embeddings |
+| falkordb | `falkordb/falkordb:latest` | 6380 (internal) | Graph store |
+
+All services include healthchecks — agentic-core waits for dependencies before starting.
+
+### Development workflow
+
+For UI iteration without rebuilding the Docker image:
+
+```bash
+# Terminal 1: Backend + dependencies
+docker compose up redis postgres falkordb
+AGENTIC_MODE=standalone AGENTIC_REDIS_URL=redis://localhost:6379 \
+  AGENTIC_POSTGRES_DSN=postgresql://agentic:agentic@localhost:5432/agentic \
+  AGENTIC_FALKORDB_URL=redis://localhost:6380 \
+  python -m agentic_core.runtime
+
+# Terminal 2: Flutter Web (hot reload)
+cd ui
+flutter run -d chrome
+```
+
+Flutter connects to the backend at `localhost:8765` via WebSocket and REST API.
+
+### REST API
+
+The standalone mode exposes a REST API at `localhost:8765/api/`:
+
+```bash
+# Health check
+curl http://localhost:8765/api/health
+
+# List agents
+curl http://localhost:8765/api/agents
+
+# Create agent
+curl -X POST http://localhost:8765/api/agents \
+  -H 'Content-Type: application/json' \
+  -d '{"name": "My Agent", "role": "assistant", "description": "Test agent"}'
+
+# Update gates
+curl -X PUT http://localhost:8765/api/agents/my-agent/gates \
+  -H 'Content-Type: application/json' \
+  -d '{"gates": [{"name": "PII Filter", "content": "Redact PII", "action": "block", "order": 0}]}'
+```
+
+Full endpoint list: `GET /api/health`, `GET/POST /api/agents`, `GET/PUT/DELETE /api/agents/:slug`, `GET/PUT /api/agents/:slug/gates`, `GET /api/metrics/:type`, `GET /api/config`.
+
+### Integration modes
+
+When agentic-core is deployed as a sidecar in Kubernetes, backends communicate via gRPC (`:50051`). Each backend translates to its own frontend protocol:
+
+```mermaid
+graph TB
+    AC["agentic-core<br/>:50051 gRPC"]
+    AD["aduanext<br/><i>gRPC native</i>"]
+    AL["altrupets<br/><i>NestJS → GraphQL</i>"]
+    VT["vertivolatam<br/><i>Serverpod adapter</i>"]
+    HN["habitanexus<br/><i>WebSocket direct</i>"]
+    SA["standalone<br/><i>REST API (demo UI)</i>"]
+
+    AC --> AD
+    AC --> AL
+    AC --> VT
+    AC --> HN
+    AC --> SA
+
+    style AC fill:#3B6FE0,color:#fff
+    style SA fill:#4CAF50,color:#fff
+```
+
+The standalone REST API is only for the demo UI — sidecar mode uses gRPC exclusively.
+
+---
+
+## Quick Start (Library)
 
 ```bash
 pip install agentic-core
