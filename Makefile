@@ -1,4 +1,4 @@
-.PHONY: proto test lint typecheck
+.PHONY: proto test lint typecheck build-web build-docker up down clean
 
 proto:
 	python -m grpc_tools.protoc \
@@ -16,3 +16,23 @@ lint:
 
 typecheck:
 	mypy src/agentic_core/
+
+# --- Standalone Agent Studio ---
+
+build-web:
+	cd ui && flutter pub get && flutter build web --release
+
+build-docker: build-web
+	podman build -t agentic-core -f deployment/docker/Dockerfile .
+
+up: build-docker
+	podman compose up -d
+	@echo "Agent Studio running at http://localhost:8765"
+
+down:
+	podman compose down
+
+clean:
+	podman compose down -v
+	podman rmi agentic-core 2>/dev/null || true
+	rm -rf ui/build/

@@ -265,12 +265,20 @@ graph TD
 
 ## Standalone Demo (Docker / Podman)
 
-Run the full Agent Studio locally — zero configuration required:
+Run the full Agent Studio locally. Requires Flutter SDK and Docker/Podman:
 
 ```bash
 git clone https://github.com/lapc506/agentic-core.git
 cd agentic-core
-docker compose up        # or: podman compose up
+make up       # builds Flutter Web + Docker image + starts all containers
+```
+
+Or step by step:
+
+```bash
+make build-web      # compiles Flutter Web UI (~30 sec)
+make build-docker   # builds Python image (~60 sec, no Flutter SDK in Docker)
+podman compose up   # starts 4 containers
 ```
 
 Open **http://localhost:8765** — you'll see the Agent Studio with:
