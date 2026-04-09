@@ -19,23 +19,23 @@
 - [x] **AP-06** GetMetricsQuery + Handler (stub, in-memory store)
 
 ### Adapters
-- [ ] **AD-01** Agregar aiohttp a pyproject.toml (optional: standalone)
-- [ ] **AD-02** Crear HTTP API adapter (REST routes + static serving + SPA fallback)
+- [x] **AD-01** Agregar aiohttp a pyproject.toml (optional: standalone)
+- [x] **AD-02** Crear HTTP API adapter (REST routes + static serving + SPA fallback)
 
 ### Runtime
-- [ ] **RT-01** Agregar settings: http_port, static_dir, api_enabled
-- [ ] **RT-02** Modificar runtime.py para iniciar aiohttp en modo standalone
+- [x] **RT-01** Agregar settings: http_port, static_dir, api_enabled
+- [x] **RT-02** Modificar runtime.py para iniciar aiohttp en modo standalone
 
 ### Infraestructura
-- [ ] **INF-01** Crear docker-compose.yml (4 services, healthchecks, volumes)
-- [ ] **INF-02** Actualizar Dockerfile (multi-stage con Flutter Web build)
+- [x] **INF-01** Crear docker-compose.yml (4 services, healthchecks, volumes)
+- [x] **INF-02** Actualizar Dockerfile (multi-stage con Flutter Web build)
 
 ### UI Placeholder
-- [ ] **UI-01** Crear Flutter Web app minima (pubspec.yaml, main.dart, index.html)
+- [x] **UI-01** Crear Flutter Web app minima (pubspec.yaml, main.dart, index.html)
 
 ### Testing
-- [ ] **TE-01** Tests unitarios HTTP API adapter (6+ tests)
-- [ ] **TE-02** Smoke test E2E (ciclo completo de agente)
+- [x] **TE-01** Tests unitarios HTTP API adapter (12 tests)
+- [x] **TE-02** Smoke test E2E (ciclo completo de agente)
 
 ## Plan 2: Flutter Web UI (pendiente)
 
