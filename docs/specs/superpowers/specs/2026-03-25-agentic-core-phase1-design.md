@@ -1,0 +1,1 @@
+/home/kvttvrsis/Documentos/GitHub/agentic-core/docs/superpowers/specs/2026-03-25-agentic-core-phase1-design.md

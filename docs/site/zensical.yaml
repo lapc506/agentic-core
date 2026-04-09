@@ -1,0 +1,45 @@
+site:
+  name: Agent Studio
+  url: https://lapc506.github.io/agentic-core/
+
+theme:
+  variant: modern
+  palette:
+    primary: custom
+    accent: custom
+  custom_colors:
+    primary: "#3B6FE0"
+    accent: "#6B9FFF"
+  font:
+    text: Ubuntu
+    code: Ubuntu Mono
+  logo: img/logo.svg
+  icon:
+    repo: github
+
+nav:
+  - index.md
+  - Getting Started:
+    - getting-started.md
+    - standalone.md
+    - tui.md
+  - API Reference:
+    - api/rest.md
+    - api/websocket.md
+    - api/ollama.md
+  - Guides:
+    - guides/providers.md
+    - guides/personas.md
+    - guides/soul-md.md
+  - Architecture:
+    - architecture/overview.md
+    - architecture/deployment.md
+
+repo:
+  url: https://github.com/lapc506/agentic-core
+
+features:
+  - search
+  - navigation.tabs
+  - navigation.sections
+  - content.code.copy

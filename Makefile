@@ -1,4 +1,4 @@
-.PHONY: proto test lint typecheck build-web build-docker up down clean
+.PHONY: proto test lint typecheck build-web build-docker up down clean docs-site docs-specs docs
 
 proto:
 	python -m grpc_tools.protoc \
@@ -36,3 +36,13 @@ clean:
 	podman compose down -v
 	podman rmi agentic-core 2>/dev/null || true
 	rm -rf ui/build/
+
+# --- Documentation ---
+
+docs-site:
+	cd docs/site && zensical build
+
+docs-specs:
+	cd docs/specs && myst build --html
+
+docs: docs-site docs-specs

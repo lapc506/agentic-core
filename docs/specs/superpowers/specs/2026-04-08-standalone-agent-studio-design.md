@@ -1,0 +1,1 @@
+/home/kvttvrsis/Documentos/GitHub/agentic-core/docs/superpowers/specs/2026-04-08-standalone-agent-studio-design.md

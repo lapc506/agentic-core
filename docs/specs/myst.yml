@@ -1,0 +1,10 @@
+version: 1
+project:
+  title: agentic-core Technical Specs
+  description: Design specifications and implementation plans
+  github: https://github.com/lapc506/agentic-core
+
+site:
+  template: book-theme
+  options:
+    favicon: img/favicon.svg
