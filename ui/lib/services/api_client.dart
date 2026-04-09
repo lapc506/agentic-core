@@ -2,8 +2,22 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiClient {
-  ApiClient({String? baseUrl}) : _baseUrl = baseUrl ?? '';
+  ApiClient({String? baseUrl}) : _baseUrl = baseUrl ?? _defaultBaseUrl();
   final String _baseUrl;
+
+  /// Resolve base URL for API calls. Web uses relative, desktop uses localhost.
+  static String _defaultBaseUrl() {
+    try {
+      final uri = Uri.base;
+      if (uri.scheme == 'http' || uri.scheme == 'https') {
+        return ''; // Web — relative URLs work
+      }
+    } catch (_) {}
+    return 'http://localhost:8080'; // Desktop/mobile fallback
+  }
+
+  /// Global base URL accessible by other files that make direct HTTP calls.
+  static String get baseUrl => _defaultBaseUrl();
 
   Future<Map<String, dynamic>> health() async {
     final resp = await http.get(Uri.parse('$_baseUrl/api/health'));

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'services/api_client.dart';
 import 'theme/agent_studio_theme.dart';
 import 'routing/router.dart';
 import 'features/onboarding/onboarding_dialog.dart';
@@ -28,7 +29,7 @@ class _AgentStudioAppState extends State<AgentStudioApp> {
 
   Future<void> _checkSetup() async {
     try {
-      final resp = await http.get(Uri.parse('/api/studio/setup-status'));
+      final resp = await http.get(Uri.parse('${ApiClient.baseUrl}/api/studio/setup-status'));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         setState(() {

@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../../services/api_client.dart';
 import '../../theme/agent_studio_theme.dart';
+
+String _url(String path) => '${ApiClient.baseUrl}$path';
 
 class OnboardingDialog extends StatefulWidget {
   const OnboardingDialog({super.key, required this.onComplete});
@@ -64,7 +67,7 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
     // Save config
     try {
       await http.post(
-        Uri.parse('/api/studio/config'),
+        Uri.parse(_url('/api/studio/config')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'onboarded': true,
@@ -91,7 +94,7 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
 
       // Create the default agent
       await http.post(
-        Uri.parse('/api/agents'),
+        Uri.parse(_url('/api/agents')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'name': _agentNameCtrl.text,
@@ -112,7 +115,7 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
     try {
       // Create default agent from defaults
       await http.post(
-        Uri.parse('/api/agents'),
+        Uri.parse(_url('/api/agents')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'name': 'Asistente Demo',
