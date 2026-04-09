@@ -4,12 +4,12 @@ import 'package:google_fonts/google_fonts.dart';
 class AgentStudioTheme {
   AgentStudioTheme._();
 
-  // Surfaces
-  static const rail = Color(0xFF080810);
-  static const panel = Color(0xFF0F0F1E);
-  static const content = Color(0xFF12121E);
-  static const card = Color(0xFF1A1A2E);
-  static const border = Color(0xFF2A2A40);
+  // Surfaces (slightly warmer/lighter dark)
+  static const rail = Color(0xFF0E1018);
+  static const panel = Color(0xFF141624);
+  static const content = Color(0xFF181A28);
+  static const card = Color(0xFF1F2236);
+  static const border = Color(0xFF2E3148);
 
   // Primary
   static const primary = Color(0xFF3B6FE0);
@@ -81,6 +81,13 @@ class AgentStudioTheme {
         unselectedLabelColor: lightTextSecondary,
         indicatorColor: primary,
       ),
+      chipTheme: ChipThemeData(
+        labelStyle: const TextStyle(color: lightTextPrimary, fontSize: 12),
+        secondaryLabelStyle: const TextStyle(color: lightTextPrimary, fontSize: 12),
+        backgroundColor: lightCard,
+        selectedColor: primary.withValues(alpha: 0.15),
+        side: const BorderSide(color: lightBorder),
+      ),
     );
   }
 
@@ -119,6 +126,13 @@ class AgentStudioTheme {
         labelColor: primary,
         unselectedLabelColor: textSecondary,
         indicatorColor: primary,
+      ),
+      chipTheme: const ChipThemeData(
+        labelStyle: TextStyle(color: textPrimary, fontSize: 12),
+        secondaryLabelStyle: TextStyle(color: textPrimary, fontSize: 12),
+        backgroundColor: card,
+        selectedColor: primary,
+        side: BorderSide(color: border),
       ),
     );
   }
