@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../shared/ui/templates/dashboard_layout.dart';
 import '../shared/ui/organisms/sidebar_panel.dart';
-import '../features/chat/chat_page.dart';
+// ignore: unused_import
+import '../features/chat/chat_page.dart'; // kept as fallback — legacy WS chat
+import '../features/chat/genui_chat_page.dart';
 import '../features/agents/agent_editor_page.dart';
 import '../features/agents/rules_page.dart';
 import '../features/sessions/sessions_page.dart';
@@ -24,7 +26,7 @@ final router = GoRouter(
         );
       },
       routes: [
-        GoRoute(path: '/', builder: (_, __) => const ChatPage()),
+        GoRoute(path: '/', builder: (_, __) => const GenUiChatPage()),
         GoRoute(path: '/agents/:id', builder: (_, state) => AgentEditorPage(agentSlug: state.pathParameters['id']!)),
         GoRoute(path: '/rules/:id', builder: (_, state) => RulesPage(agentSlug: state.pathParameters['id']!)),
         GoRoute(path: '/sessions', builder: (_, __) => const SessionsPage()),

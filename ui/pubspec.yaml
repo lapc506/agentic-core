@@ -16,6 +16,7 @@ dependencies:
   flutter_quill: ^11.0.0
   xterm: ^4.0.0
   graphic: ^2.0.0
+  genui: ^0.8.0
 
 dev_dependencies:
   flutter_test:

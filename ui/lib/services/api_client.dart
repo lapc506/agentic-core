@@ -61,4 +61,14 @@ class ApiClient {
     final resp = await http.get(Uri.parse('$_baseUrl/api/metrics/$metricType?window=$window'));
     return jsonDecode(resp.body) as Map<String, dynamic>;
   }
+
+  /// Generic POST for arbitrary endpoints (used by GenUI transport).
+  Future<Map<String, dynamic>> rawPost(String path, Map<String, dynamic> body) async {
+    final resp = await http.post(
+      Uri.parse('$_baseUrl$path'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+    return jsonDecode(resp.body) as Map<String, dynamic>;
+  }
 }
