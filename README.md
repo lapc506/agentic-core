@@ -178,7 +178,7 @@ graph LR
 - **Hybrid Transport** -- WebSocket (bidirectional, streaming, ElevenLabs voice) + gRPC (backend-to-sidecar)
 - **LangGraph Orchestration** -- Pluggable graph templates: ReAct, Plan-and-Execute, Reflexion, LLM-Compiler, Supervisor, Orchestrator
 - **Unified Memory** -- Redis + PostgreSQL + pgvector + FalkorDB (all required)
-- **MCP Bridge** -- Discover and execute tools from MCP servers with phantom tool prevention (OpenClaw #50131 mitigation)
+- **MCP Bridge** -- Discover and execute tools from MCP servers with phantom tool prevention
 - **Multimodal RAG** -- Gemini Embedding 2 (text + image + audio + video + PDF in one vector space) with Matryoshka dimension control
 - **Meta-Orchestration** -- GSD Sequencer, Superpowers Flow, Auto Research Loop for self-improving agents
 - **Hybrid Persona System** -- YAML config (PM-editable) + Python code (engineer override)
@@ -584,7 +584,7 @@ stateDiagram-v2
 
 ## Tool Health & Phantom Tool Prevention
 
-Lesson learned from [OpenClaw #50131](https://github.com/openclaw/openclaw/issues/50131): tools visible to the LLM but failing at runtime cause hallucinated responses.
+Lesson learned: tools visible to the LLM but failing at runtime cause hallucinated responses.
 
 ```mermaid
 stateDiagram-v2

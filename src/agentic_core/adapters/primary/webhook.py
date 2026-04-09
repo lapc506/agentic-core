@@ -2,7 +2,7 @@
 
 Primary adapter that maps incoming webhook payloads to agent actions
 via configurable route templates. Follows POST /hooks/<name> pattern
-inspired by OpenClaw.
+webhook adapter.
 
 Usage:
     router = WebhookRouter()

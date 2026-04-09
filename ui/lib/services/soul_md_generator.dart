@@ -1,5 +1,5 @@
 /// Generates a SOUL.md file from agent configuration data.
-/// Follows the 3-section structure from openclaw: Identity, Communication, Boundaries.
+/// Follows a 3-section structure: Identity, Communication, Boundaries.
 class SoulMdGenerator {
   SoulMdGenerator._();
 

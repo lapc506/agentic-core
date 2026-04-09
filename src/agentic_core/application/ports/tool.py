@@ -13,7 +13,7 @@ class ToolInfo(ABC):
 class ToolPort(ABC):
     """Execute tools by name.
 
-    DESIGN NOTE (OpenClaw issue #50131 mitigation): Tools MUST be validated at
+    DESIGN NOTE (phantom tool mitigation): Tools MUST be validated at
     registration time via healthcheck_tool. Tools that fail are never registered."""
 
     @abstractmethod

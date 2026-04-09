@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../theme/agent_studio_theme.dart';
 
-/// Inputs tab — Character file inspired by ElizaOS character files.
+/// Inputs tab — Character file editor.
 /// Fields: Personalidad (name, bio, system prompt), Lore & Style,
 /// Modelo & Template, Actions (tools), Context Providers (knowledge sources).
 class InputsTab extends StatelessWidget {
@@ -13,7 +13,7 @@ class InputsTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        // --- Personalidad (ElizaOS: name, bio, system prompt) ---
+        // --- Personalidad ---
         _buildCard(
           icon: Icons.theater_comedy,
           title: 'Personalidad',
@@ -33,11 +33,11 @@ class InputsTab extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // --- Lore & Style (ElizaOS: lore, style) ---
+        // --- Lore & Style ---
         _buildCard(
           icon: Icons.auto_stories,
           title: 'Lore & Style',
-          subtitle: 'Personalidad profunda — inspirado por ElizaOS character files',
+          subtitle: 'Personalidad profunda del agente',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -82,7 +82,7 @@ class InputsTab extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // --- Actions (ElizaOS: actions = tools) ---
+        // --- Actions (tools) ---
         _buildCard(
           icon: Icons.bolt,
           title: 'Actions (Tools)',
@@ -108,11 +108,11 @@ class InputsTab extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // --- Context Providers (ElizaOS: providers = knowledge sources) ---
+        // --- Context Providers ---
         _buildCard(
           icon: Icons.library_books,
           title: 'Context Providers',
-          subtitle: 'Fuentes de conocimiento dinámico — ElizaOS provider pattern',
+          subtitle: 'Fuentes de conocimiento dinámico',
           trailing: TextButton(
             onPressed: () {},
             child: const Text('+ Agregar', style: TextStyle(color: AgentStudioTheme.primary, fontSize: 12)),
@@ -128,11 +128,11 @@ class InputsTab extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // --- Memory (openclaw: auto-extract, dedup, recall) ---
+        // --- Memory ---
         _buildCard(
           icon: Icons.memory,
           title: 'Memory',
-          subtitle: 'Auto-extract facts from conversations — openclaw pattern',
+          subtitle: 'Auto-extract facts from conversations',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

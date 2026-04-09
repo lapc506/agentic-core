@@ -23,13 +23,15 @@ COPY --from=builder /app/src /app/src
 COPY ui/build/web /app/web
 
 WORKDIR /app
+RUN mkdir -p /app/agents
 ENV PYTHONPATH=/app/src:/usr/local/lib/python3.12/site-packages
+ENV AGENTIC_PERSONAS_DIR=/app/agents
 ENV AGENTIC_MODE=standalone
 ENV AGENTIC_STATIC_DIR=/app/web
 ENV AGENTIC_WS_PORT=8765
 ENV AGENTIC_GRPC_PORT=50051
 
 EXPOSE 8080 8765 50051 9090
-RUN useradd -r -s /bin/false appuser
+RUN useradd -r -s /bin/false appuser && chown -R appuser /app
 USER appuser
 ENTRYPOINT ["python", "-m", "agentic_core.runtime"]

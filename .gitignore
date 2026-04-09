@@ -11,3 +11,5 @@ coverage.xml
 htmlcov/
 *.so
 .superpowers/
+ui/.dart_tool/
+ui/.flutter-plugins-dependencies

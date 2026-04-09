@@ -132,7 +132,7 @@ class MCPBridgeAdapter(ToolPort):
     """Discovers, connects, and manages tools from MCP servers.
 
     Implements phantom tool prevention: tools are healthchecked at registration
-    and dynamically deregistered on failure (OpenClaw #50131 mitigation)."""
+    and dynamically deregistered on failure (phantom tool mitigation)."""
 
     def __init__(self, config: MCPBridgeConfig, event_bus: EventBus) -> None:
         self._config = config

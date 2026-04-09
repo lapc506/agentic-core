@@ -1,6 +1,6 @@
 """Scheduled task execution via cron expressions and heartbeat intervals.
 
-Inspired by OpenClaw cron+heartbeat pattern and Hermes /cron command.
+Cron scheduler with heartbeat pattern.
 
 Usage:
     scheduler = CronScheduler()

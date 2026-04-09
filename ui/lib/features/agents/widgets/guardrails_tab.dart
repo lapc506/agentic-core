@@ -61,7 +61,7 @@ class _GuardrailsTabState extends State<GuardrailsTab> {
                         color: AgentStudioTheme.textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w600)),
-                Text('Post-response checks — ElizaOS evaluator pattern',
+                Text('Post-response checks before sending to user',
                     style: TextStyle(
                         color: AgentStudioTheme.textSecondary, fontSize: 10)),
               ],
@@ -125,7 +125,7 @@ class _GuardrailsTabState extends State<GuardrailsTab> {
         ),
         const SizedBox(height: 24),
 
-        // --- LLM Judge (openclaw pattern) ---
+        // --- LLM Judge ---
         Container(
           decoration: BoxDecoration(
             color: AgentStudioTheme.card,
@@ -146,7 +146,7 @@ class _GuardrailsTabState extends State<GuardrailsTab> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('LLM Judge', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
-                          Text('Evalúa calidad de resultados de tools — openclaw pattern', style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 10)),
+                          Text('Evalúa calidad de resultados de tools antes de enviar al usuario', style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 10)),
                         ],
                       ),
                     ),
@@ -192,7 +192,7 @@ class _GuardrailsTabState extends State<GuardrailsTab> {
         ),
         const SizedBox(height: 16),
 
-        // --- Boundaries (openclaw: explicit deny list) ---
+        // --- Boundaries (explicit deny list) ---
         Container(
           decoration: BoxDecoration(
             color: AgentStudioTheme.card,
