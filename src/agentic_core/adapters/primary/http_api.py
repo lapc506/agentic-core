@@ -6,10 +6,14 @@ and optional static-file serving with SPA fallback for Flutter Web.
 
 from __future__ import annotations
 
+import json
+import logging
 import os
 from pathlib import Path
 from typing import Any
 
+import aiohttp
+import yaml
 from aiohttp import web
 
 from agentic_core.application.commands.create_agent import (
@@ -135,6 +139,194 @@ async def get_metrics(request: web.Request) -> web.Response:
     return web.json_response(result)
 
 
+# ---------------------------------------------------------------------------
+# Config providers (persistence)
+# ---------------------------------------------------------------------------
+
+_CONFIG_FILE = "studio_config.json"
+
+
+_DEFAULTS_FILE = "defaults/studio_config.json"
+
+
+def _config_path(app: web.Application) -> Path:
+    agents_dir = app.get("agents_dir", ".")
+    return Path(agents_dir).parent / _CONFIG_FILE
+
+
+def _load_or_init_config(app: web.Application) -> dict[str, Any]:
+    """Load config from disk, or initialize from defaults if first run."""
+    path = _config_path(app)
+    if path.exists():
+        return json.loads(path.read_text())
+
+    # Try loading defaults from repo
+    defaults_path = Path(_DEFAULTS_FILE)
+    if defaults_path.exists():
+        return json.loads(defaults_path.read_text())
+
+    return {"providers": [], "default_agent": None, "onboarded": False}
+
+
+async def get_studio_config(request: web.Request) -> web.Response:
+    return web.json_response(_load_or_init_config(request.app))
+
+
+async def save_studio_config(request: web.Request) -> web.Response:
+    body = await request.json()
+    path = _config_path(request.app)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(body, indent=2))
+    return web.json_response({"saved": True})
+
+
+async def get_setup_status(request: web.Request) -> web.Response:
+    """Check if onboarding is complete: has providers + at least one agent."""
+    path = _config_path(request.app)
+    has_config = path.exists()
+    config_data = json.loads(path.read_text()) if has_config else {}
+    agents_handler: ListAgentsHandler = request.app["list_agents_handler"]
+    agents = await agents_handler.execute(ListAgentsQuery())
+    return web.json_response({
+        "onboarded": config_data.get("onboarded", False),
+        "has_providers": len(config_data.get("providers", [])) > 0,
+        "has_agents": len(agents) > 0,
+        "default_agent": config_data.get("default_agent"),
+        "agent_count": len(agents),
+    })
+
+
+# ---------------------------------------------------------------------------
+# LLM provider helpers
+# ---------------------------------------------------------------------------
+
+_log = logging.getLogger(__name__)
+
+
+def _load_provider_config(app: web.Application) -> dict[str, Any] | None:
+    """Load the active provider from studio_config.json or defaults."""
+    config = _load_or_init_config(app)
+    providers = config.get("providers", [])
+    if not providers:
+        return None
+    # Use the first active or default provider
+    for p in providers:
+        if p.get("status") in ("active", "default"):
+            return p
+    return providers[0] if providers else None
+
+
+def _load_agent_prompt(app: web.Application, persona_id: str) -> str:
+    """Load system prompt from agent YAML file."""
+    agents_dir = app.get("agents_dir", "agents")
+    yaml_path = Path(agents_dir) / f"{persona_id}.yaml"
+    if yaml_path.exists():
+        with open(yaml_path) as f:
+            data = yaml.safe_load(f) or {}
+        return data.get("system_prompt", "You are a helpful assistant.")
+    return "You are a helpful assistant."
+
+
+# ---------------------------------------------------------------------------
+# WebSocket handler (proxy to same protocol as websockets transport)
+# ---------------------------------------------------------------------------
+
+
+async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
+    """Handle WebSocket connections using aiohttp (same port as HTTP)."""
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+
+    sessions: set[str] = set()
+    import uuid_utils
+
+    async for msg in ws:
+        if msg.type == aiohttp.WSMsgType.TEXT:
+            try:
+                data = json.loads(msg.data)
+            except json.JSONDecodeError:
+                await ws.send_json({"type": "error", "code": "invalid_payload", "message": "Invalid JSON"})
+                continue
+
+            msg_type = data.get("type")
+
+            if msg_type == "create_session":
+                session_id = str(uuid_utils.uuid7())
+                sessions.add(session_id)
+                await ws.send_json({"type": "session_created", "session_id": session_id})
+
+            elif msg_type == "message":
+                session_id = data.get("session_id", "")
+                persona_id = data.get("persona_id", "")
+                content = data.get("content", "")
+                if session_id not in sessions:
+                    await ws.send_json({"type": "error", "session_id": session_id,
+                                        "code": "invalid_session", "message": "Session not found"})
+                    continue
+
+                await ws.send_json({"type": "stream_start", "session_id": session_id})
+
+                provider = _load_provider_config(request.app)
+                if provider and provider.get("baseUrl"):
+                    try:
+                        from langchain_openai import ChatOpenAI
+                        from langchain_core.messages import HumanMessage, SystemMessage
+
+                        llm = ChatOpenAI(
+                            base_url=provider["baseUrl"],
+                            api_key=provider.get("apiKey") or "not-needed",
+                            model=provider.get("model", "gpt-3.5-turbo"),
+                            streaming=True,
+                        )
+
+                        system_prompt = _load_agent_prompt(request.app, persona_id)
+                        messages = [
+                            SystemMessage(content=system_prompt),
+                            HumanMessage(content=content),
+                        ]
+
+                        async for chunk in llm.astream(messages):
+                            if chunk.content:
+                                await ws.send_json({
+                                    "type": "stream_token",
+                                    "session_id": session_id,
+                                    "token": chunk.content,
+                                })
+                    except Exception as e:
+                        _log.warning("LLM call failed: %s", e)
+                        await ws.send_json({
+                            "type": "stream_token",
+                            "session_id": session_id,
+                            "token": f"Error connecting to LLM: {e}. "
+                                     "Configure a provider in Settings \u2192 Modelos.",
+                        })
+                else:
+                    # No provider configured — helpful fallback
+                    await ws.send_json({
+                        "type": "stream_token",
+                        "session_id": session_id,
+                        "token": "No inference provider configured. "
+                                 "Go to Settings \u2192 Modelos to add OpenRouter, Ollama, or another provider.",
+                    })
+
+                await ws.send_json({"type": "stream_end", "session_id": session_id})
+
+            elif msg_type == "close_session":
+                session_id = data.get("session_id", "")
+                sessions.discard(session_id)
+                await ws.send_json({"type": "session_closed", "session_id": session_id})
+
+        elif msg.type == aiohttp.WSMsgType.ERROR:
+            break
+
+    return ws
+
+
+# ---------------------------------------------------------------------------
+# SPA fallback
+# ---------------------------------------------------------------------------
+
+
 async def spa_fallback(request: web.Request) -> web.Response:
     """Serve static file if it exists, otherwise index.html (SPA routing)."""
     static_dir: str | None = request.app.get("static_dir")
@@ -191,6 +383,12 @@ def create_app(
     app.router.add_get("/api/agents/{slug}/gates", get_gates)
     app.router.add_put("/api/agents/{slug}/gates", update_gates)
     app.router.add_get("/api/metrics/{metric_type}", get_metrics)
+    app.router.add_get("/api/studio/config", get_studio_config)
+    app.router.add_post("/api/studio/config", save_studio_config)
+    app.router.add_get("/api/studio/setup-status", get_setup_status)
+
+    # --- WebSocket ---
+    app.router.add_get("/ws", websocket_handler)
 
     # --- Static files + SPA fallback ---
     if static_dir and Path(static_dir).is_dir():

@@ -27,6 +27,7 @@ dependencies = [
 [project.optional-dependencies]
 standalone = [
     "aiohttp>=3.9",
+    "langchain-openai>=0.3",
 ]
 all = [
     "langgraph>=0.3",
@@ -84,6 +85,7 @@ module = [
     "langgraph.*",
     "langchain_core.*",
     "langchain_anthropic.*",
+    "langchain_openai.*",
 ]
 ignore_missing_imports = true
 
