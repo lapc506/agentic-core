@@ -39,6 +39,7 @@ from agentic_core.application.queries.list_agents import (
     ListAgentsHandler,
     ListAgentsQuery,
 )
+from agentic_core.adapters.primary.a2a import A2AServer, AgentCard
 
 
 # ---------------------------------------------------------------------------
@@ -659,6 +660,29 @@ async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
 
 
 # ---------------------------------------------------------------------------
+# A2A Protocol handlers
+# ---------------------------------------------------------------------------
+
+
+async def a2a_agent_card(request: web.Request) -> web.Response:
+    """GET /.well-known/agent.json — serve A2A AgentCard for discovery."""
+    server: A2AServer | None = request.app.get("a2a_server")
+    if not server:
+        return web.json_response({"error": "A2A not configured"}, status=404)
+    return web.json_response(server.get_agent_card())
+
+
+async def a2a_jsonrpc(request: web.Request) -> web.Response:
+    """POST /a2a — handle JSON-RPC 2.0 requests for A2A protocol."""
+    server: A2AServer | None = request.app.get("a2a_server")
+    if not server:
+        return web.json_response({"error": "A2A not configured"}, status=404)
+    body = await request.json()
+    result = await server.handle_jsonrpc(body)
+    return web.json_response(result)
+
+
+# ---------------------------------------------------------------------------
 # SPA fallback
 # ---------------------------------------------------------------------------
 
@@ -708,6 +732,15 @@ def create_app(
     app["update_gates_handler"] = UpdateGatesHandler(agents_dir)
     app["get_metrics_handler"] = GetMetricsHandler()
 
+    # --- A2A server ---
+    a2a_server = A2AServer(AgentCard(
+        name="Agent Studio",
+        description="Visual agent configuration and orchestration",
+        url=f"http://localhost:{settings.get('http_port', 8080) if settings else 8080}",
+        capabilities=["chat", "task_delegation", "streaming"],
+    ))
+    app["a2a_server"] = a2a_server
+
     # --- API routes ---
     app.router.add_get("/api/health", health)
     app.router.add_get("/api/config", config)
@@ -728,6 +761,10 @@ def create_app(
     app.router.add_post("/api/generate", ollama_generate)
     app.router.add_get("/api/tags", ollama_tags)
     app.router.add_post("/api/show", ollama_show)
+
+    # --- A2A Protocol ---
+    app.router.add_get("/.well-known/agent.json", a2a_agent_card)
+    app.router.add_post("/a2a", a2a_jsonrpc)
 
     # --- WebSocket ---
     app.router.add_get("/ws", websocket_handler)
