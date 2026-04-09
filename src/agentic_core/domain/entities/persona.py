@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from agentic_core.domain.enums import GraphTemplate, PersonaCapability
+from agentic_core.domain.value_objects.gate import Gate
 from agentic_core.domain.value_objects.model_config import ModelConfig
 from agentic_core.domain.value_objects.slo import SLOTargets
 
@@ -57,6 +58,7 @@ class Persona:
     delegate_to: list[DelegateConfig] = field(default_factory=list)
     graph_cls: type[BaseAgentGraph] | None = None
     personality: PersonalityConfig | None = None
+    gates: list[Gate] = field(default_factory=list)
 
     def get_delegate_model_config(self, delegate_name: str) -> ModelConfig | None:
         for d in self.delegate_to:

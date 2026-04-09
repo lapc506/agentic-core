@@ -83,6 +83,11 @@ class AgenticSettings(BaseSettings):
     # Personas
     personas_dir: str = "agents/"
 
+    # Standalone HTTP (REST + static)
+    http_port: int = 8765
+    static_dir: str = "/app/web"
+    api_enabled: bool = True
+
     # Sub-configs
     default_model: ModelConfig = ModelConfig()
     mcp: MCPBridgeConfig = MCPBridgeConfig()
