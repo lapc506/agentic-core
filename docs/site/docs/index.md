@@ -35,6 +35,8 @@ Built on [Explicit Architecture](https://herbertograca.com/2017/11/16/explicit-a
 | **Sandbox Execution** | Isolated code execution environments (Docker, subprocess) with resource limits and result capture |
 | **Programmatic Tools** | Register and call Python functions as agent tools at runtime without MCP server overhead |
 | **Voice Integration** | ElevenLabs WebSocket streaming with PCM audio chunking and real-time transcript bridging |
+| **Multi-Agent Coordination** | Lane orchestrator with branch lock collision detection, green contracts (graduated CI gates), and recovery recipes (7 scenarios, auto-retry + escalate) |
+| **Branch Management** | Stale branch detection, auto-rebase policy, and task packet validation with structured work contracts |
 
 ---
 

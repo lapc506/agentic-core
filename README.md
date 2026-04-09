@@ -612,6 +612,11 @@ How agentic-core compares to the leading AI agent frameworks:
 | HTN hierarchical task planning | :white_check_mark: | :white_check_mark: | :x: | :x: |
 | Multi-persona routing (channel + keyword) | :white_check_mark: | :x: | :white_check_mark: | :x: |
 | A2A Protocol (agent-to-agent) | :white_check_mark: | :x: | :x: | :x: |
+| Multi-agent lane orchestration (branch lock, collision detection) | :white_check_mark: | :x: | :x: | :x: |
+| Green contracts (graduated CI gates) | :white_check_mark: | :x: | :x: | :x: |
+| Recovery recipes (7 scenarios, auto-retry + escalate) | :white_check_mark: | :x: | :x: | :x: |
+| Stale branch detection + auto-rebase | :white_check_mark: | :x: | :x: | :x: |
+| Task packet validation (structured work contracts) | :white_check_mark: | :x: | :x: | :x: |
 | **Memory** | | | | |
 | Semantic memory (fact extraction + dedup) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | Procedural memory (skill self-creation) | :white_check_mark: | :x: | :x: | :white_check_mark: |
@@ -664,6 +669,7 @@ How agentic-core compares to the leading AI agent frameworks:
 - Only framework with **A2A Protocol** for agent-to-agent interoperability
 - Only framework with **Kubernetes-native sidecar deployment** alongside standalone Docker
 - Only framework with both **Flutter Web UI and Go TUI** interfaces
+- Only framework with **multi-agent lane orchestration** (branch lock, collision detection, green contracts, recovery recipes)
 
 ## Project Status
 

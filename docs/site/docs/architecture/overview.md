@@ -107,3 +107,24 @@ Skill self-improvement via batch execution, binary-rule evaluation, and instruct
 Tools are registered through `MCPBridge` at startup. Before a tool is added to the LLM's context, it must pass a health check. Tools that fail the check are excluded — the LLM never sees them. If a registered tool degrades during runtime, it is deregistered and a `ToolDegraded` event is published. The LLM's tool list is updated before the next request.
 
 This prevents the common failure mode where an LLM hallucinates successful tool calls because the tool was visible but broken.
+
+---
+
+## Multi-Agent Coordination Layer
+
+When multiple agents work in parallel on the same repository, the **Lane Orchestrator** manages coordination:
+
+### Lane Orchestrator
+A state machine that assigns agents to isolated branches ("lanes"), manages branch locks to prevent collision, and coordinates merge back to main. States: idle -> booting -> running -> validating -> merging -> complete, with recovery transitions at each stage.
+
+### Green Contracts
+Graduated CI gates that each lane must pass before merge: lint/format -> unit tests -> integration tests -> e2e tests. Each gate must pass before the next runs. A failed gate blocks merge and triggers the recovery engine.
+
+### Recovery Engine
+Handles 7 common failure scenarios (merge conflicts, flaky tests, worker timeout, dependency failures, lock contention, CI unavailability, schema errors) with a 1-auto-retry-then-escalate policy. Simple conflicts are auto-resolved via rebase; complex failures escalate to a human or supervisor agent.
+
+### Task Packet Validation
+Structured work contracts validated against a JSON Schema before assignment to workers. Each packet specifies the task scope, dependencies, expected outputs, and acceptance criteria.
+
+### Branch Management
+Stale branch detection uses an age + activity heuristic to identify abandoned branches. Auto-rebase policy keeps active branches aligned with main, offering cleanup for truly stale work.
