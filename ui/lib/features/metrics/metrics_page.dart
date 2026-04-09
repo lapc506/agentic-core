@@ -1,80 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:graphic/graphic.dart';
 import '../../theme/agent_studio_theme.dart';
+import '../../services/api_client.dart';
 
-// ── Mock data ────────────────────────────────────────────────────────────────
+// -- Fallback empty data used when API returns nothing -----------------------
 
-final _latencyData = [
-  {'time': '10:00', 'percentile': 'p50', 'value': 120},
-  {'time': '10:00', 'percentile': 'p95', 'value': 250},
-  {'time': '10:00', 'percentile': 'p99', 'value': 320},
-  {'time': '11:00', 'percentile': 'p50', 'value': 115},
-  {'time': '11:00', 'percentile': 'p95', 'value': 230},
-  {'time': '11:00', 'percentile': 'p99', 'value': 305},
-  {'time': '12:00', 'percentile': 'p50', 'value': 130},
-  {'time': '12:00', 'percentile': 'p95', 'value': 270},
-  {'time': '12:00', 'percentile': 'p99', 'value': 345},
-  {'time': '13:00', 'percentile': 'p50', 'value': 110},
-  {'time': '13:00', 'percentile': 'p95', 'value': 220},
-  {'time': '13:00', 'percentile': 'p99', 'value': 290},
-  {'time': '14:00', 'percentile': 'p50', 'value': 140},
-  {'time': '14:00', 'percentile': 'p95', 'value': 280},
-  {'time': '14:00', 'percentile': 'p99', 'value': 360},
-  {'time': '15:00', 'percentile': 'p50', 'value': 125},
-  {'time': '15:00', 'percentile': 'p95', 'value': 245},
-  {'time': '15:00', 'percentile': 'p99', 'value': 315},
-  {'time': '16:00', 'percentile': 'p50', 'value': 135},
-  {'time': '16:00', 'percentile': 'p95', 'value': 265},
-  {'time': '16:00', 'percentile': 'p99', 'value': 340},
-  {'time': '17:00', 'percentile': 'p50', 'value': 118},
-  {'time': '17:00', 'percentile': 'p95', 'value': 235},
-  {'time': '17:00', 'percentile': 'p99', 'value': 300},
-  {'time': '18:00', 'percentile': 'p50', 'value': 145},
-  {'time': '18:00', 'percentile': 'p95', 'value': 290},
-  {'time': '18:00', 'percentile': 'p99', 'value': 370},
-  {'time': '19:00', 'percentile': 'p50', 'value': 112},
-  {'time': '19:00', 'percentile': 'p95', 'value': 225},
-  {'time': '19:00', 'percentile': 'p99', 'value': 295},
-];
+const List<Map<String, Object>> _emptyLatency = [];
+const List<Map<String, Object>> _emptyTokens = [];
+const List<Map<String, Object>> _emptyGates = [];
+const List<Map<String, Object>> _emptySessions = [];
 
-final _tokenData = [
-  {'period': 'Lun', 'agent': 'Asistente', 'tokens': 4200},
-  {'period': 'Lun', 'agent': 'Reviewer', 'tokens': 1800},
-  {'period': 'Mar', 'agent': 'Asistente', 'tokens': 3800},
-  {'period': 'Mar', 'agent': 'Reviewer', 'tokens': 2100},
-  {'period': 'Mié', 'agent': 'Asistente', 'tokens': 5100},
-  {'period': 'Mié', 'agent': 'Reviewer', 'tokens': 1600},
-  {'period': 'Jue', 'agent': 'Asistente', 'tokens': 4600},
-  {'period': 'Jue', 'agent': 'Reviewer', 'tokens': 2400},
-  {'period': 'Vie', 'agent': 'Asistente', 'tokens': 3900},
-  {'period': 'Vie', 'agent': 'Reviewer', 'tokens': 1900},
-];
-
-final _gateData = [
-  {'gate': 'Safety', 'result': 'Pass', 'count': 187},
-  {'gate': 'Safety', 'result': 'Fail', 'count': 13},
-  {'gate': 'Quality', 'result': 'Pass', 'count': 162},
-  {'gate': 'Quality', 'result': 'Fail', 'count': 38},
-  {'gate': 'Policy', 'result': 'Pass', 'count': 194},
-  {'gate': 'Policy', 'result': 'Fail', 'count': 6},
-];
-
-final _sessionData = [
-  {'hour': '08:00', 'sessions': 3},
-  {'hour': '09:00', 'sessions': 7},
-  {'hour': '10:00', 'sessions': 12},
-  {'hour': '11:00', 'sessions': 18},
-  {'hour': '12:00', 'sessions': 14},
-  {'hour': '13:00', 'sessions': 9},
-  {'hour': '14:00', 'sessions': 16},
-  {'hour': '15:00', 'sessions': 21},
-  {'hour': '16:00', 'sessions': 19},
-  {'hour': '17:00', 'sessions': 11},
-  {'hour': '18:00', 'sessions': 6},
-  {'hour': '19:00', 'sessions': 4},
-];
-
-// ── Custom axis style helpers ─────────────────────────────────────────────────
+// -- Axis helpers -----------------------------------------------------------
 
 AxisGuide _hAxis() => AxisGuide(
       line: PaintStyle(strokeColor: AgentStudioTheme.border, strokeWidth: 1),
@@ -92,73 +28,161 @@ AxisGuide _vAxis() => AxisGuide(
       grid: PaintStyle(strokeColor: AgentStudioTheme.border, strokeWidth: 1),
     );
 
-// ── Page ─────────────────────────────────────────────────────────────────────
+// -- Page -------------------------------------------------------------------
 
-class MetricsPage extends StatelessWidget {
+class MetricsPage extends StatefulWidget {
   const MetricsPage({super.key});
+
+  @override
+  State<MetricsPage> createState() => _MetricsPageState();
+}
+
+class _MetricsPageState extends State<MetricsPage> {
+  final _api = ApiClient();
+  bool _loading = true;
+
+  // KPI values
+  String _activeSessions = '\u2014';
+  String _latencyP99 = '\u2014';
+  String _gatesPassRate = '\u2014';
+  String _tokensPerHour = '\u2014';
+
+  // Chart data
+  List<Map<String, Object>> _latencyData = [];
+  List<Map<String, Object>> _tokenData = [];
+  List<Map<String, Object>> _gateData = [];
+  List<Map<String, Object>> _sessionData = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMetrics();
+  }
+
+  Future<void> _loadMetrics() async {
+    try {
+      final results = await Future.wait([
+        _api.getMetrics('latency').catchError((_) => <String, dynamic>{}),
+        _api.getMetrics('tokens').catchError((_) => <String, dynamic>{}),
+        _api.getMetrics('gates').catchError((_) => <String, dynamic>{}),
+        _api.getMetrics('sessions').catchError((_) => <String, dynamic>{}),
+      ]);
+
+      final latencyResp = results[0];
+      final tokensResp = results[1];
+      final gatesResp = results[2];
+      final sessionsResp = results[3];
+
+      setState(() {
+        // KPIs
+        if (sessionsResp.containsKey('active')) {
+          _activeSessions = '${sessionsResp['active']}';
+        }
+        if (latencyResp.containsKey('p99')) {
+          _latencyP99 = '${latencyResp['p99']}ms';
+        }
+        if (gatesResp.containsKey('pass_rate')) {
+          _gatesPassRate = '${gatesResp['pass_rate']}%';
+        }
+        if (tokensResp.containsKey('per_hour')) {
+          _tokensPerHour = '${tokensResp['per_hour']}';
+        }
+
+        // Chart series
+        if (latencyResp.containsKey('series')) {
+          _latencyData = _castList(latencyResp['series']);
+        }
+        if (tokensResp.containsKey('series')) {
+          _tokenData = _castList(tokensResp['series']);
+        }
+        if (gatesResp.containsKey('series')) {
+          _gateData = _castList(gatesResp['series']);
+        }
+        if (sessionsResp.containsKey('series')) {
+          _sessionData = _castList(sessionsResp['series']);
+        }
+
+        _loading = false;
+      });
+    } catch (_) {
+      setState(() => _loading = false);
+    }
+  }
+
+  List<Map<String, Object>> _castList(dynamic raw) {
+    if (raw is! List) return [];
+    return raw.map<Map<String, Object>>((item) {
+      if (item is Map) {
+        return item.map((k, v) => MapEntry(k.toString(), v as Object));
+      }
+      return <String, Object>{};
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        const Text(
-          'Métricas',
-          style: TextStyle(
-            color: AgentStudioTheme.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Monitoreo de rendimiento en tiempo real',
-          style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12),
-        ),
-        const SizedBox(height: 20),
-        // ── KPI row ──────────────────────────────────────────────────────────
         Row(
           children: [
-            _kpiCard('Sesiones Activas', '12', Icons.people, AgentStudioTheme.primary),
-            const SizedBox(width: 12),
-            _kpiCard('Latencia p99', '320ms', Icons.speed, AgentStudioTheme.success),
-            const SizedBox(width: 12),
-            _kpiCard('Gates Pass Rate', '94%', Icons.verified, AgentStudioTheme.warning),
-            const SizedBox(width: 12),
-            _kpiCard('Tokens/hora', '14.2k', Icons.token, AgentStudioTheme.info),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Metricas', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
+                  SizedBox(height: 4),
+                  Text('Monitoreo de rendimiento en tiempo real', style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12)),
+                ],
+              ),
+            ),
+            if (_loading)
+              const SizedBox(
+                width: 16, height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AgentStudioTheme.primary),
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.refresh, size: 18, color: AgentStudioTheme.textSecondary),
+                tooltip: 'Recargar',
+                onPressed: () {
+                  setState(() => _loading = true);
+                  _loadMetrics();
+                },
+              ),
           ],
         ),
         const SizedBox(height: 20),
-        // ── Latency line chart ────────────────────────────────────────────────
+        // -- KPI row --
+        Row(
+          children: [
+            _kpiCard('Sesiones Activas', _activeSessions, Icons.people, AgentStudioTheme.primary),
+            const SizedBox(width: 12),
+            _kpiCard('Latencia p99', _latencyP99, Icons.speed, AgentStudioTheme.success),
+            const SizedBox(width: 12),
+            _kpiCard('Gates Pass Rate', _gatesPassRate, Icons.verified, AgentStudioTheme.warning),
+            const SizedBox(width: 12),
+            _kpiCard('Tokens/hora', _tokensPerHour, Icons.token, AgentStudioTheme.info),
+          ],
+        ),
+        const SizedBox(height: 20),
+        // -- Latency line chart --
         _chartCard(
           title: 'Latencia por agente',
-          subtitle: 'p50 / p95 / p99 — ms',
-          child: Chart(
-            data: _latencyData,
+          subtitle: 'p50 / p95 / p99 \u2014 ms',
+          data: _latencyData,
+          emptyFallback: _emptyLatency,
+          builder: (data) => Chart(
+            data: data,
             variables: {
-              'time': Variable(
-                accessor: (Map map) => map['time'] as String,
-                scale: OrdinalScale(inflate: true),
-              ),
-              'value': Variable(
-                accessor: (Map map) => map['value'] as num,
-                scale: LinearScale(min: 0),
-              ),
-              'percentile': Variable(
-                accessor: (Map map) => map['percentile'] as String,
-              ),
+              'time': Variable(accessor: (Map map) => map['time'] as String, scale: OrdinalScale(inflate: true)),
+              'value': Variable(accessor: (Map map) => map['value'] as num, scale: LinearScale(min: 0)),
+              'percentile': Variable(accessor: (Map map) => map['percentile'] as String),
             },
             marks: [
               LineMark(
                 position: Varset('time') * Varset('value') / Varset('percentile'),
-                color: ColorEncode(
-                  variable: 'percentile',
-                  values: [
-                    AgentStudioTheme.primary,
-                    AgentStudioTheme.warning,
-                    AgentStudioTheme.error,
-                  ],
-                ),
+                color: ColorEncode(variable: 'percentile', values: [AgentStudioTheme.primary, AgentStudioTheme.warning, AgentStudioTheme.error]),
                 size: SizeEncode(value: 2),
               ),
             ],
@@ -169,36 +193,24 @@ class MetricsPage extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Token usage stacked bar ───────────────────────────────────────
+            // -- Token usage stacked bar --
             Expanded(
               child: _chartCard(
                 title: 'Token usage',
                 subtitle: 'Tokens por agente',
-                child: Chart(
-                  data: _tokenData,
+                data: _tokenData,
+                emptyFallback: _emptyTokens,
+                builder: (data) => Chart(
+                  data: data,
                   variables: {
-                    'period': Variable(
-                      accessor: (Map map) => map['period'] as String,
-                      scale: OrdinalScale(inflate: true),
-                    ),
-                    'tokens': Variable(
-                      accessor: (Map map) => map['tokens'] as num,
-                      scale: LinearScale(min: 0),
-                    ),
-                    'agent': Variable(
-                      accessor: (Map map) => map['agent'] as String,
-                    ),
+                    'period': Variable(accessor: (Map map) => map['period'] as String, scale: OrdinalScale(inflate: true)),
+                    'tokens': Variable(accessor: (Map map) => map['tokens'] as num, scale: LinearScale(min: 0)),
+                    'agent': Variable(accessor: (Map map) => map['agent'] as String),
                   },
                   marks: [
                     IntervalMark(
                       position: Varset('period') * Varset('tokens') / Varset('agent'),
-                      color: ColorEncode(
-                        variable: 'agent',
-                        values: [
-                          AgentStudioTheme.primary,
-                          AgentStudioTheme.info,
-                        ],
-                      ),
+                      color: ColorEncode(variable: 'agent', values: [AgentStudioTheme.primary, AgentStudioTheme.info]),
                       modifiers: [StackModifier()],
                     ),
                   ],
@@ -207,36 +219,24 @@ class MetricsPage extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-            // ── Gate pass/fail bar ────────────────────────────────────────────
+            // -- Gate pass/fail bar --
             Expanded(
               child: _chartCard(
                 title: 'Gate pass/fail',
                 subtitle: 'Conteo por gate',
-                child: Chart(
-                  data: _gateData,
+                data: _gateData,
+                emptyFallback: _emptyGates,
+                builder: (data) => Chart(
+                  data: data,
                   variables: {
-                    'gate': Variable(
-                      accessor: (Map map) => map['gate'] as String,
-                      scale: OrdinalScale(inflate: true),
-                    ),
-                    'count': Variable(
-                      accessor: (Map map) => map['count'] as num,
-                      scale: LinearScale(min: 0),
-                    ),
-                    'result': Variable(
-                      accessor: (Map map) => map['result'] as String,
-                    ),
+                    'gate': Variable(accessor: (Map map) => map['gate'] as String, scale: OrdinalScale(inflate: true)),
+                    'count': Variable(accessor: (Map map) => map['count'] as num, scale: LinearScale(min: 0)),
+                    'result': Variable(accessor: (Map map) => map['result'] as String),
                   },
                   marks: [
                     IntervalMark(
                       position: Varset('gate') * Varset('count') / Varset('result'),
-                      color: ColorEncode(
-                        variable: 'result',
-                        values: [
-                          AgentStudioTheme.success,
-                          AgentStudioTheme.error,
-                        ],
-                      ),
+                      color: ColorEncode(variable: 'result', values: [AgentStudioTheme.success, AgentStudioTheme.error]),
                       modifiers: [StackModifier()],
                     ),
                   ],
@@ -247,26 +247,20 @@ class MetricsPage extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        // ── Sessions per hour bar ─────────────────────────────────────────────
+        // -- Sessions per hour bar --
         _chartCard(
           title: 'Sesiones por hora',
           subtitle: 'Conteo de sesiones',
-          child: Chart(
-            data: _sessionData,
+          data: _sessionData,
+          emptyFallback: _emptySessions,
+          builder: (data) => Chart(
+            data: data,
             variables: {
-              'hour': Variable(
-                accessor: (Map map) => map['hour'] as String,
-                scale: OrdinalScale(inflate: true),
-              ),
-              'sessions': Variable(
-                accessor: (Map map) => map['sessions'] as num,
-                scale: LinearScale(min: 0),
-              ),
+              'hour': Variable(accessor: (Map map) => map['hour'] as String, scale: OrdinalScale(inflate: true)),
+              'sessions': Variable(accessor: (Map map) => map['sessions'] as num, scale: LinearScale(min: 0)),
             },
             marks: [
-              IntervalMark(
-                color: ColorEncode(value: AgentStudioTheme.primary),
-              ),
+              IntervalMark(color: ColorEncode(value: AgentStudioTheme.primary)),
             ],
             axes: [_hAxis(), _vAxis()],
           ),
@@ -290,23 +284,10 @@ class MetricsPage extends StatelessWidget {
             Row(children: [
               Icon(icon, size: 16, color: color),
               const Spacer(),
-              Text(
-                value,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text(value, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.bold)),
             ]),
             const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                color: AgentStudioTheme.textSecondary,
-                fontSize: 11,
-              ),
-            ),
+            Text(label, style: const TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 11)),
           ],
         ),
       ),
@@ -316,8 +297,11 @@ class MetricsPage extends StatelessWidget {
   Widget _chartCard({
     required String title,
     required String subtitle,
-    required Widget child,
+    required List<Map<String, Object>> data,
+    required List<Map<String, Object>> emptyFallback,
+    required Widget Function(List<Map<String, Object>>) builder,
   }) {
+    final hasData = data.isNotEmpty;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -328,24 +312,21 @@ class MetricsPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: AgentStudioTheme.textPrimary,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          Text(title, style: const TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
           const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: AgentStudioTheme.textSecondary,
-              fontSize: 11,
-            ),
-          ),
+          Text(subtitle, style: const TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 11)),
           const SizedBox(height: 12),
-          SizedBox(height: 160, child: child),
+          SizedBox(
+            height: 160,
+            child: hasData
+                ? builder(data)
+                : const Center(
+                    child: Text(
+                      'Sin datos disponibles. Conecta al backend para ver metricas.',
+                      style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12),
+                    ),
+                  ),
+          ),
         ],
       ),
     );

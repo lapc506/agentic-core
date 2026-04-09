@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:xterm/xterm.dart';
@@ -12,21 +13,11 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  // ignore: unused_field
-  Map<String, dynamic> _config = {};
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
-    _loadConfig();
-  }
-
-  Future<void> _loadConfig() async {
-    try {
-      final config = await ApiClient().health();
-      setState(() => _config = config);
-    } catch (_) {}
   }
 
   @override
@@ -77,16 +68,82 @@ class _SettingsPageState extends State<SettingsPage> with SingleTickerProviderSt
   }
 }
 
-class _ConnectionsTab extends StatelessWidget {
+// ---------------------------------------------------------------------------
+// Connections Tab -- pings /api/health for real status
+// ---------------------------------------------------------------------------
+
+class _ConnectionsTab extends StatefulWidget {
+  @override
+  State<_ConnectionsTab> createState() => _ConnectionsTabState();
+}
+
+class _ConnectionsTabState extends State<_ConnectionsTab> {
+  final _api = ApiClient();
+  bool _loading = true;
+
+  // Default services with unknown status
+  final List<Map<String, dynamic>> _services = [
+    {'name': 'Redis', 'url': 'redis://redis:6379', 'connected': false},
+    {'name': 'PostgreSQL', 'url': 'postgresql://agentic@postgres:5432/agentic', 'connected': false},
+    {'name': 'FalkorDB', 'url': 'redis://falkordb:6380', 'connected': false},
+    {'name': 'MCP Bridge', 'url': 'Not configured', 'connected': false},
+  ];
+
+  Map<String, dynamic> _rateLimits = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _checkConnections();
+  }
+
+  Future<void> _checkConnections() async {
+    try {
+      final health = await _api.health();
+
+      setState(() {
+        // Update service status from health response
+        final services = health['services'];
+        if (services is Map) {
+          for (final svc in _services) {
+            final name = (svc['name'] as String).toLowerCase();
+            if (services.containsKey(name)) {
+              final svcData = services[name];
+              if (svcData is Map) {
+                svc['connected'] = svcData['status'] == 'ok' || svcData['connected'] == true;
+                if (svcData.containsKey('url')) {
+                  svc['url'] = svcData['url'];
+                }
+              } else if (svcData is bool) {
+                svc['connected'] = svcData;
+              }
+            }
+          }
+        }
+
+        // Rate limits from health
+        if (health.containsKey('rate_limits')) {
+          _rateLimits = health['rate_limits'] as Map<String, dynamic>? ?? {};
+        }
+
+        _loading = false;
+      });
+    } catch (_) {
+      setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        _statusRow('Redis', 'redis://redis:6379', true),
-        _statusRow('PostgreSQL', 'postgresql://agentic@postgres:5432/agentic', true),
-        _statusRow('FalkorDB', 'redis://falkordb:6380', true),
-        _statusRow('MCP Bridge', 'Not configured', false),
+        if (_loading) const LinearProgressIndicator(color: AgentStudioTheme.primary),
+        ..._services.map((svc) => _statusRow(
+          svc['name'] as String,
+          svc['url'] as String,
+          svc['connected'] as bool,
+        )),
         const SizedBox(height: 24),
         const Text('RATE LIMITS', style: TextStyle(color: AgentStudioTheme.primary, fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1)),
         const SizedBox(height: 8),
@@ -97,30 +154,21 @@ class _ConnectionsTab extends StatelessWidget {
             border: Border.all(color: AgentStudioTheme.border),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Column(
+          child: Column(
             children: [
+              _rateLimitRow('Queries/minuto', _rateLimits['rpm']?.toString() ?? '10'),
+              const SizedBox(height: 8),
+              _rateLimitRow('Queries/hora', _rateLimits['rph']?.toString() ?? '120'),
+              const SizedBox(height: 8),
+              _rateLimitRow('Queries/dia', _rateLimits['rpd']?.toString() ?? '1000'),
+              const Divider(height: 24, color: AgentStudioTheme.border),
               Row(children: [
-                Text('Queries/minuto', style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12)),
-                Spacer(),
-                Text('10', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.bold)),
-              ]),
-              SizedBox(height: 8),
-              Row(children: [
-                Text('Queries/hora', style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12)),
-                Spacer(),
-                Text('120', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.bold)),
-              ]),
-              SizedBox(height: 8),
-              Row(children: [
-                Text('Queries/día', style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12)),
-                Spacer(),
-                Text('1000', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.bold)),
-              ]),
-              Divider(height: 24, color: AgentStudioTheme.border),
-              Row(children: [
-                Text('Circuit breaker', style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12)),
-                Spacer(),
-                Text('3 consecutive / 5 in window → 60s cooldown', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 11)),
+                const Text('Circuit breaker', style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12)),
+                const Spacer(),
+                Text(
+                  _rateLimits['circuit_breaker'] as String? ?? '3 consecutive / 5 in window \u2192 60s cooldown',
+                  style: const TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 11),
+                ),
               ]),
             ],
           ),
@@ -165,12 +213,22 @@ class _ConnectionsTab extends StatelessWidget {
     );
   }
 
+  Widget _rateLimitRow(String label, String value) {
+    return Row(children: [
+      Text(label, style: const TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12)),
+      const Spacer(),
+      Text(value, style: const TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.bold)),
+    ]);
+  }
+
   Widget _statusRow(String name, String url, bool connected) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AgentStudioTheme.card, border: Border.all(color: AgentStudioTheme.border), borderRadius: BorderRadius.circular(8),
+        color: AgentStudioTheme.card,
+        border: Border.all(color: AgentStudioTheme.border),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
@@ -181,12 +239,20 @@ class _ConnectionsTab extends StatelessWidget {
             Text(url, style: const TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12)),
           ]),
           const Spacer(),
-          Text(connected ? 'Connected' : 'Offline', style: TextStyle(color: connected ? AgentStudioTheme.success : AgentStudioTheme.error, fontSize: 12)),
+          if (_loading)
+            const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AgentStudioTheme.textSecondary))
+          else
+            Text(connected ? 'Connected' : 'Offline',
+              style: TextStyle(color: connected ? AgentStudioTheme.success : AgentStudioTheme.error, fontSize: 12)),
         ],
       ),
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Models Tab -- unchanged
+// ---------------------------------------------------------------------------
 
 class _ModelsTab extends StatefulWidget {
   @override
@@ -223,13 +289,10 @@ class _ModelsTabState extends State<_ModelsTab> {
         const Text('Configura providers de inferencia LLM. Todos los compatibles con OpenAI API funcionan.',
           style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12)),
         const SizedBox(height: 16),
-
-        // Provider presets
         const Text('PRESETS', style: TextStyle(color: AgentStudioTheme.primary, fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1)),
         const SizedBox(height: 8),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 8, runSpacing: 8,
           children: [
             _presetChip('Ollama (local)', 'http://localhost:11434/v1', 'llama3.1'),
             _presetChip('LMStudio', 'http://localhost:1234/v1', 'loaded-model'),
@@ -240,8 +303,6 @@ class _ModelsTabState extends State<_ModelsTab> {
           ],
         ),
         const SizedBox(height: 24),
-
-        // Configured providers
         const Text('CONFIGURADOS', style: TextStyle(color: AgentStudioTheme.primary, fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1)),
         const SizedBox(height: 8),
         ..._providers.map((p) => _providerCard(p)),
@@ -256,13 +317,7 @@ class _ModelsTabState extends State<_ModelsTab> {
       backgroundColor: AgentStudioTheme.card,
       side: const BorderSide(color: AgentStudioTheme.border),
       onPressed: () {
-        _addProvider({
-          'name': name,
-          'type': 'openai',
-          'model': model,
-          'baseUrl': baseUrl,
-          'status': 'configured',
-        });
+        _addProvider({'name': name, 'type': 'openai', 'model': model, 'baseUrl': baseUrl, 'status': 'configured'});
       },
     );
   }
@@ -354,13 +409,7 @@ class _ModelsTabState extends State<_ModelsTab> {
           FilledButton(
             onPressed: () {
               if (nameCtrl.text.isNotEmpty && urlCtrl.text.isNotEmpty) {
-                _addProvider({
-                  'name': nameCtrl.text,
-                  'type': 'openai',
-                  'model': modelCtrl.text,
-                  'baseUrl': urlCtrl.text,
-                  'status': 'configured',
-                });
+                _addProvider({'name': nameCtrl.text, 'type': 'openai', 'model': modelCtrl.text, 'baseUrl': urlCtrl.text, 'status': 'configured'});
                 Navigator.pop(ctx);
               }
             },
@@ -373,13 +422,64 @@ class _ModelsTabState extends State<_ModelsTab> {
   }
 }
 
-class _VariablesTab extends StatelessWidget {
+// ---------------------------------------------------------------------------
+// Variables Tab -- loads from /api/config
+// ---------------------------------------------------------------------------
+
+class _VariablesTab extends StatefulWidget {
+  @override
+  State<_VariablesTab> createState() => _VariablesTabState();
+}
+
+class _VariablesTabState extends State<_VariablesTab> {
+  final _api = ApiClient();
+  Map<String, String> _vars = {};
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConfig();
+  }
+
+  Future<void> _loadConfig() async {
+    try {
+      final config = await _api.getConfig();
+      final Map<String, String> parsed = {};
+      for (final entry in config.entries) {
+        parsed[entry.key] = entry.value?.toString() ?? '';
+      }
+      setState(() {
+        _vars = parsed;
+        _loading = false;
+      });
+    } catch (_) {
+      // Fallback to defaults when API unavailable
+      setState(() {
+        _vars = {
+          'AGENTIC_MODE': 'standalone',
+          'AGENTIC_WS_PORT': '8765',
+          'AGENTIC_RATE_LIMIT_RPM': '60',
+          'AGENTIC_PII_REDACTION_ENABLED': 'true',
+        };
+        _loading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final vars = {'AGENTIC_MODE': 'standalone', 'AGENTIC_WS_PORT': '8765', 'AGENTIC_RATE_LIMIT_RPM': '60', 'AGENTIC_PII_REDACTION_ENABLED': 'true'};
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator(color: AgentStudioTheme.primary));
+    }
+    if (_vars.isEmpty) {
+      return const Center(
+        child: Text('No hay variables de configuracion.', style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 13)),
+      );
+    }
     return ListView(
       padding: const EdgeInsets.all(20),
-      children: vars.entries.map((e) => Container(
+      children: _vars.entries.map((e) => Container(
         margin: const EdgeInsets.only(bottom: 4),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(color: AgentStudioTheme.card, borderRadius: BorderRadius.circular(4)),
@@ -388,12 +488,18 @@ class _VariablesTab extends StatelessWidget {
           const SizedBox(width: 8),
           const Text('=', style: TextStyle(color: AgentStudioTheme.textSecondary)),
           const SizedBox(width: 8),
-          Text(e.value, style: const TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 13, fontFamily: 'monospace')),
+          Expanded(
+            child: Text(e.value, style: const TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 13, fontFamily: 'monospace')),
+          ),
         ]),
       )).toList(),
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Debug Tab -- polls /api/health and accepts keyboard input
+// ---------------------------------------------------------------------------
 
 class _DebugTab extends StatefulWidget {
   @override
@@ -402,21 +508,86 @@ class _DebugTab extends StatefulWidget {
 
 class _DebugTabState extends State<_DebugTab> {
   late Terminal _terminal;
+  final _api = ApiClient();
+  Timer? _pollTimer;
+  String _inputBuffer = '';
 
   @override
   void initState() {
     super.initState();
     _terminal = Terminal(maxLines: 1000);
-    // Write sample log output
-    _terminal.write('agentic-core | \x1B[34mINFO\x1B[0m  Runtime starting on 0.0.0.0:8765 (ws) + 0.0.0.0:50051 (grpc)\r\n');
-    _terminal.write('agentic-core | \x1B[34mINFO\x1B[0m  Mode: standalone\r\n');
-    _terminal.write('agentic-core | \x1B[34mINFO\x1B[0m  Redis connected: redis://redis:6379\r\n');
-    _terminal.write('agentic-core | \x1B[34mINFO\x1B[0m  PostgreSQL connected: postgresql://agentic@postgres:5432/agentic\r\n');
-    _terminal.write('agentic-core | \x1B[34mINFO\x1B[0m  FalkorDB connected: redis://falkordb:6380\r\n');
-    _terminal.write('agentic-core | \x1B[34mINFO\x1B[0m  Loaded 3 personas from agents/\r\n');
-    _terminal.write('agentic-core | \x1B[33mWARN\x1B[0m  MCP server \'exchange-rate\' health check timeout (3s)\r\n');
-    _terminal.write('agentic-core | \x1B[34mINFO\x1B[0m  HTTP API started on port 8765\r\n');
-    _terminal.write('\r\n\x1B[32m\$ \x1B[0m');
+    _terminal.write('agentic-core | \x1B[34mINFO\x1B[0m  Debug terminal ready. Polling /api/health every 5s...\r\n');
+    _terminal.write('\r\n');
+
+    // Set up keyboard input handler
+    _terminal.onOutput = (data) {
+      for (final char in data.codeUnits) {
+        if (char == 13) {
+          // Enter key
+          _terminal.write('\r\n');
+          _handleCommand(_inputBuffer.trim());
+          _inputBuffer = '';
+          _writePrompt();
+        } else if (char == 127 || char == 8) {
+          // Backspace
+          if (_inputBuffer.isNotEmpty) {
+            _inputBuffer = _inputBuffer.substring(0, _inputBuffer.length - 1);
+            _terminal.write('\b \b');
+          }
+        } else {
+          _inputBuffer += String.fromCharCode(char);
+          _terminal.write(String.fromCharCode(char));
+        }
+      }
+    };
+
+    _pollHealth();
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _pollHealth());
+    _writePrompt();
+  }
+
+  void _writePrompt() {
+    _terminal.write('\x1B[32m\$ \x1B[0m');
+  }
+
+  void _handleCommand(String cmd) {
+    if (cmd.isEmpty) return;
+    if (cmd == 'health' || cmd == 'status') {
+      _terminal.write('agentic-core | \x1B[34mINFO\x1B[0m  Fetching health...\r\n');
+      _pollHealth();
+    } else if (cmd == 'clear') {
+      _terminal.write('\x1B[2J\x1B[H');
+    } else if (cmd == 'help') {
+      _terminal.write('Available commands: health, status, clear, help\r\n');
+    } else {
+      _terminal.write('Unknown command: $cmd (type "help" for available commands)\r\n');
+    }
+  }
+
+  Future<void> _pollHealth() async {
+    try {
+      final health = await _api.health();
+      final status = health['status'] ?? 'unknown';
+      final services = health['services'];
+      final ts = DateTime.now().toIso8601String().substring(11, 19);
+      _terminal.write('[$ts] \x1B[34mHEALTH\x1B[0m status=$status');
+      if (services is Map) {
+        for (final entry in services.entries) {
+          final svcStatus = entry.value is Map ? (entry.value as Map)['status'] ?? '?' : entry.value;
+          _terminal.write(' ${entry.key}=$svcStatus');
+        }
+      }
+      _terminal.write('\r\n');
+    } catch (e) {
+      final ts = DateTime.now().toIso8601String().substring(11, 19);
+      _terminal.write('[$ts] \x1B[31mERROR\x1B[0m  Health check failed: $e\r\n');
+    }
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -430,17 +601,14 @@ class _DebugTabState extends State<_DebugTab> {
       ),
       child: Column(
         children: [
-          // Header with controls
+          // Header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: AgentStudioTheme.border)),
-            ),
+            decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AgentStudioTheme.border))),
             child: Row(
               children: [
                 const Text('Terminal', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
                 const SizedBox(width: 8),
-                // Container selector
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
@@ -464,10 +632,9 @@ class _DebugTabState extends State<_DebugTab> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(color: const Color(0xFF1a2e1a), borderRadius: BorderRadius.circular(4)),
-                  child: const Text('● Connected', style: TextStyle(color: AgentStudioTheme.success, fontSize: 10)),
+                  child: const Text('\u25CF Polling', style: TextStyle(color: AgentStudioTheme.success, fontSize: 10)),
                 ),
                 const Spacer(),
-                // Log level filters
                 ...['ALL', 'INFO', 'WARN', 'ERROR'].map((level) => Padding(
                   padding: const EdgeInsets.only(left: 4),
                   child: Container(
@@ -525,35 +692,126 @@ class _DebugTabState extends State<_DebugTab> {
   }
 }
 
-class _DockerTab extends StatelessWidget {
+// ---------------------------------------------------------------------------
+// Docker Tab -- loads from /api/docker/status or shows CLI hint
+// ---------------------------------------------------------------------------
+
+class _DockerTab extends StatefulWidget {
+  @override
+  State<_DockerTab> createState() => _DockerTabState();
+}
+
+class _DockerTabState extends State<_DockerTab> {
+  final _api = ApiClient();
+  List<Map<String, dynamic>> _containers = [];
+  bool _loading = true;
+  bool _apiAvailable = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDockerStatus();
+  }
+
+  Future<void> _loadDockerStatus() async {
+    try {
+      final resp = await _api.getDockerStatus();
+      final containers = resp['containers'];
+      if (containers is List) {
+        setState(() {
+          _containers = containers.cast<Map<String, dynamic>>();
+          _apiAvailable = true;
+          _loading = false;
+        });
+        return;
+      }
+    } catch (_) {}
+
+    // Fallback: API not available
+    setState(() {
+      _loading = false;
+      _apiAvailable = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final containers = [
-      {'name': 'agentic-core', 'status': 'running', 'port': '8765'},
-      {'name': 'redis', 'status': 'running', 'port': '6379'},
-      {'name': 'postgres', 'status': 'running', 'port': '5432'},
-      {'name': 'falkordb', 'status': 'running', 'port': '6380'},
-    ];
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator(color: AgentStudioTheme.primary));
+    }
+
+    if (!_apiAvailable) {
+      return Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.info_outline, size: 32, color: AgentStudioTheme.textSecondary),
+            const SizedBox(height: 12),
+            const Text(
+              'Docker status no disponible desde el navegador.',
+              style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AgentStudioTheme.card,
+                border: Border.all(color: AgentStudioTheme.border),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const SelectableText(
+                'podman ps --format "table {{.Names}}\\t{{.Status}}\\t{{.Ports}}"',
+                style: TextStyle(color: AgentStudioTheme.primary, fontSize: 13, fontFamily: 'monospace'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Ejecuta el comando anterior en tu terminal para ver el estado de los contenedores.',
+              style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12),
+            ),
+          ],
+        ),
+      );
+    }
+
     return ListView(
       padding: const EdgeInsets.all(20),
-      children: containers.map((c) => Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: AgentStudioTheme.card, border: Border.all(color: AgentStudioTheme.border), borderRadius: BorderRadius.circular(8)),
-        child: Row(children: [
-          const Icon(Icons.inventory_2, size: 18, color: AgentStudioTheme.textSecondary),
-          const SizedBox(width: 12),
-          Text(c['name']!, style: const TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
-          const Spacer(),
-          Text(':${c['port']}', style: const TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12, fontFamily: 'monospace')),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(color: const Color(0xFF1a2e1a), borderRadius: BorderRadius.circular(4)),
-            child: Text('● ${c['status']}', style: const TextStyle(color: AgentStudioTheme.success, fontSize: 10)),
+      children: _containers.map((c) {
+        final name = c['name'] as String? ?? 'unknown';
+        final status = c['status'] as String? ?? 'unknown';
+        final port = c['port'] as String? ?? '';
+        final isRunning = status == 'running';
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AgentStudioTheme.card,
+            border: Border.all(color: AgentStudioTheme.border),
+            borderRadius: BorderRadius.circular(8),
           ),
-        ]),
-      )).toList(),
+          child: Row(children: [
+            const Icon(Icons.inventory_2, size: 18, color: AgentStudioTheme.textSecondary),
+            const SizedBox(width: 12),
+            Text(name, style: const TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+            const Spacer(),
+            if (port.isNotEmpty)
+              Text(':$port', style: const TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12, fontFamily: 'monospace')),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: isRunning ? const Color(0xFF1a2e1a) : const Color(0xFF2e1a1a),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '\u25CF $status',
+                style: TextStyle(color: isRunning ? AgentStudioTheme.success : AgentStudioTheme.error, fontSize: 10),
+              ),
+            ),
+          ]),
+        );
+      }).toList(),
     );
   }
 }

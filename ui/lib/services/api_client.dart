@@ -62,6 +62,28 @@ class ApiClient {
     return jsonDecode(resp.body) as Map<String, dynamic>;
   }
 
+  Future<List<Map<String, dynamic>>> listTools() async {
+    final resp = await http.get(Uri.parse('$_baseUrl/api/tools'));
+    final list = jsonDecode(resp.body) as List;
+    return list.cast<Map<String, dynamic>>();
+  }
+
+  Future<List<Map<String, dynamic>>> listSessions() async {
+    final resp = await http.get(Uri.parse('$_baseUrl/api/sessions'));
+    final list = jsonDecode(resp.body) as List;
+    return list.cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> getConfig() async {
+    final resp = await http.get(Uri.parse('$_baseUrl/api/config'));
+    return jsonDecode(resp.body) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getDockerStatus() async {
+    final resp = await http.get(Uri.parse('$_baseUrl/api/docker/status'));
+    return jsonDecode(resp.body) as Map<String, dynamic>;
+  }
+
   /// Generic POST for arbitrary endpoints (used by GenUI transport).
   Future<Map<String, dynamic>> rawPost(String path, Map<String, dynamic> body) async {
     final resp = await http.post(
