@@ -8,7 +8,9 @@ from typing import Any
 import structlog
 
 from agentic_core.adapters.primary.grpc.server import GrpcTransport
+from agentic_core.adapters.primary.http_api import create_app
 from agentic_core.adapters.primary.websocket import WebSocketTransport
+from aiohttp import web
 from agentic_core.application.commands.create_session import (
     CreateSessionCommand,
     CreateSessionHandler,
@@ -173,6 +175,23 @@ class AgentRuntime:
 
     # -- Lifecycle --
 
+    async def _start_http(self) -> None:
+        """Start aiohttp server for REST API + static file serving."""
+        self._http_app = create_app(
+            agents_dir=self._settings.personas_dir,
+            static_dir=self._settings.static_dir,
+            settings=self._settings,
+        )
+        self._http_runner = web.AppRunner(self._http_app)
+        await self._http_runner.setup()
+        site = web.TCPSite(
+            self._http_runner,
+            self._settings.ws_host,
+            self._settings.http_port,
+        )
+        await site.start()
+        logger.info("HTTP API started on port %d", self._settings.http_port)
+
     async def start(self) -> None:
         logger.info(
             "Starting AgentRuntime in %s mode (ws=%s:%d, grpc=%s:%d)",
@@ -180,7 +199,10 @@ class AgentRuntime:
             self._settings.ws_host, self._settings.ws_port,
             self._settings.grpc_host, self._settings.grpc_port,
         )
-        await asyncio.gather(self._ws.start(), self._grpc.start())
+        servers = [self._ws.start(), self._grpc.start()]
+        if self._settings.mode == "standalone" and self._settings.api_enabled:
+            servers.append(self._start_http())
+        await asyncio.gather(*servers)
         self._is_running = True
         logger.info("AgentRuntime started")
 
