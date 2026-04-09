@@ -1,6 +1,7 @@
 """HTTP API adapter (aiohttp) for standalone mode.
 
 Provides REST routes for agent CRUD, gates, metrics, health, config,
+Ollama-compatible API endpoints (/api/chat, /api/generate, /api/tags, /api/show),
 and optional static-file serving with SPA fallback for Flutter Web.
 """
 
@@ -9,6 +10,8 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -228,6 +231,339 @@ def _load_agent_prompt(app: web.Application, persona_id: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Ollama-compatible API endpoints
+# ---------------------------------------------------------------------------
+
+
+def _ollama_timestamp() -> str:
+    """Return an ISO-8601 timestamp with trailing Z for Ollama responses."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+
+async def _ollama_stream_chat(
+    request: web.Request,
+    model: str,
+    messages: list[dict[str, str]],
+) -> web.StreamResponse:
+    """Stream an LLM chat response in Ollama ndjson format."""
+    resp = web.StreamResponse(
+        status=200,
+        reason="OK",
+        headers={"Content-Type": "application/x-ndjson"},
+    )
+    await resp.prepare(request)
+
+    t_start = time.monotonic_ns()
+    eval_count = 0
+
+    provider = _load_provider_config(request.app)
+    if provider and provider.get("baseUrl"):
+        try:
+            from langchain_openai import ChatOpenAI
+            from langchain_core.messages import (
+                AIMessage,
+                HumanMessage,
+                SystemMessage,
+            )
+
+            llm = ChatOpenAI(
+                base_url=provider["baseUrl"],
+                api_key=provider.get("apiKey") or "not-needed",
+                model=provider.get("model", "gpt-3.5-turbo"),
+                streaming=True,
+            )
+
+            # Load system prompt from persona YAML
+            system_prompt = _load_agent_prompt(request.app, model)
+
+            lc_messages: list[SystemMessage | HumanMessage | AIMessage] = [
+                SystemMessage(content=system_prompt),
+            ]
+            for m in messages:
+                role = m.get("role", "user")
+                content = m.get("content", "")
+                if role == "system":
+                    lc_messages.append(SystemMessage(content=content))
+                elif role == "assistant":
+                    lc_messages.append(AIMessage(content=content))
+                else:
+                    lc_messages.append(HumanMessage(content=content))
+
+            async for chunk in llm.astream(lc_messages):
+                if chunk.content:
+                    eval_count += 1
+                    line = json.dumps({
+                        "model": model,
+                        "created_at": _ollama_timestamp(),
+                        "message": {"role": "assistant", "content": chunk.content},
+                        "done": False,
+                    }) + "\n"
+                    await resp.write(line.encode())
+
+        except Exception as exc:
+            _log.warning("Ollama chat LLM call failed: %s", exc)
+            err_line = json.dumps({
+                "model": model,
+                "created_at": _ollama_timestamp(),
+                "message": {"role": "assistant", "content": f"Error: {exc}"},
+                "done": False,
+            }) + "\n"
+            await resp.write(err_line.encode())
+    else:
+        fallback = json.dumps({
+            "model": model,
+            "created_at": _ollama_timestamp(),
+            "message": {
+                "role": "assistant",
+                "content": "No inference provider configured. "
+                           "Go to Settings to add a provider.",
+            },
+            "done": False,
+        }) + "\n"
+        await resp.write(fallback.encode())
+
+    total_duration = time.monotonic_ns() - t_start
+    done_line = json.dumps({
+        "model": model,
+        "created_at": _ollama_timestamp(),
+        "message": {"role": "assistant", "content": ""},
+        "done": True,
+        "total_duration": total_duration,
+        "eval_count": eval_count,
+    }) + "\n"
+    await resp.write(done_line.encode())
+    await resp.write_eof()
+    return resp
+
+
+async def _ollama_collect_chat(
+    request: web.Request,
+    model: str,
+    messages: list[dict[str, str]],
+) -> web.Response:
+    """Return a single JSON object with the complete chat response (non-streaming)."""
+    t_start = time.monotonic_ns()
+    eval_count = 0
+    full_content = ""
+
+    provider = _load_provider_config(request.app)
+    if provider and provider.get("baseUrl"):
+        try:
+            from langchain_openai import ChatOpenAI
+            from langchain_core.messages import (
+                AIMessage,
+                HumanMessage,
+                SystemMessage,
+            )
+
+            llm = ChatOpenAI(
+                base_url=provider["baseUrl"],
+                api_key=provider.get("apiKey") or "not-needed",
+                model=provider.get("model", "gpt-3.5-turbo"),
+                streaming=True,
+            )
+
+            system_prompt = _load_agent_prompt(request.app, model)
+            lc_messages: list[SystemMessage | HumanMessage | AIMessage] = [
+                SystemMessage(content=system_prompt),
+            ]
+            for m in messages:
+                role = m.get("role", "user")
+                content = m.get("content", "")
+                if role == "system":
+                    lc_messages.append(SystemMessage(content=content))
+                elif role == "assistant":
+                    lc_messages.append(AIMessage(content=content))
+                else:
+                    lc_messages.append(HumanMessage(content=content))
+
+            async for chunk in llm.astream(lc_messages):
+                if chunk.content:
+                    eval_count += 1
+                    full_content += chunk.content
+
+        except Exception as exc:
+            _log.warning("Ollama chat LLM call failed: %s", exc)
+            full_content = f"Error: {exc}"
+    else:
+        full_content = (
+            "No inference provider configured. Go to Settings to add a provider."
+        )
+
+    total_duration = time.monotonic_ns() - t_start
+    return web.json_response({
+        "model": model,
+        "created_at": _ollama_timestamp(),
+        "message": {"role": "assistant", "content": full_content},
+        "done": True,
+        "total_duration": total_duration,
+        "eval_count": eval_count,
+    })
+
+
+async def ollama_chat(request: web.Request) -> web.StreamResponse | web.Response:
+    """POST /api/chat -- Ollama-compatible chat completions."""
+    body = await request.json()
+    model = body.get("model", "")
+    messages = body.get("messages", [])
+    stream = body.get("stream", True)
+
+    if stream:
+        return await _ollama_stream_chat(request, model, messages)
+    return await _ollama_collect_chat(request, model, messages)
+
+
+async def ollama_generate(request: web.Request) -> web.StreamResponse | web.Response:
+    """POST /api/generate -- Ollama-compatible text generation."""
+    body = await request.json()
+    model = body.get("model", "")
+    prompt = body.get("prompt", "")
+    stream = body.get("stream", True)
+
+    # Convert to chat format with a single user message
+    messages = [{"role": "user", "content": prompt}]
+
+    if not stream:
+        # Non-streaming: collect and return in generate format
+        t_start = time.monotonic_ns()
+        chat_resp = await _ollama_collect_chat(request, model, messages)
+        chat_data = json.loads(chat_resp.body)
+        total_duration = time.monotonic_ns() - t_start
+        return web.json_response({
+            "model": model,
+            "created_at": _ollama_timestamp(),
+            "response": chat_data["message"]["content"],
+            "done": True,
+            "total_duration": total_duration,
+            "eval_count": chat_data.get("eval_count", 0),
+        })
+
+    # Streaming: wrap _ollama_stream_chat logic but emit "response" key
+    resp = web.StreamResponse(
+        status=200,
+        reason="OK",
+        headers={"Content-Type": "application/x-ndjson"},
+    )
+    await resp.prepare(request)
+
+    t_start = time.monotonic_ns()
+    eval_count = 0
+
+    provider = _load_provider_config(request.app)
+    if provider and provider.get("baseUrl"):
+        try:
+            from langchain_openai import ChatOpenAI
+            from langchain_core.messages import HumanMessage, SystemMessage
+
+            llm = ChatOpenAI(
+                base_url=provider["baseUrl"],
+                api_key=provider.get("apiKey") or "not-needed",
+                model=provider.get("model", "gpt-3.5-turbo"),
+                streaming=True,
+            )
+
+            system_prompt = _load_agent_prompt(request.app, model)
+            lc_messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=prompt),
+            ]
+
+            async for chunk in llm.astream(lc_messages):
+                if chunk.content:
+                    eval_count += 1
+                    line = json.dumps({
+                        "model": model,
+                        "created_at": _ollama_timestamp(),
+                        "response": chunk.content,
+                        "done": False,
+                    }) + "\n"
+                    await resp.write(line.encode())
+
+        except Exception as exc:
+            _log.warning("Ollama generate LLM call failed: %s", exc)
+            err_line = json.dumps({
+                "model": model,
+                "created_at": _ollama_timestamp(),
+                "response": f"Error: {exc}",
+                "done": False,
+            }) + "\n"
+            await resp.write(err_line.encode())
+    else:
+        fallback = json.dumps({
+            "model": model,
+            "created_at": _ollama_timestamp(),
+            "response": "No inference provider configured. "
+                        "Go to Settings to add a provider.",
+            "done": False,
+        }) + "\n"
+        await resp.write(fallback.encode())
+
+    total_duration = time.monotonic_ns() - t_start
+    done_line = json.dumps({
+        "model": model,
+        "created_at": _ollama_timestamp(),
+        "response": "",
+        "done": True,
+        "total_duration": total_duration,
+        "eval_count": eval_count,
+    }) + "\n"
+    await resp.write(done_line.encode())
+    await resp.write_eof()
+    return resp
+
+
+async def ollama_tags(request: web.Request) -> web.Response:
+    """GET /api/tags -- List agent personas as Ollama models."""
+    handler: ListAgentsHandler = request.app["list_agents_handler"]
+    agents = await handler.execute(ListAgentsQuery())
+    now = _ollama_timestamp()
+    models = []
+    for agent in agents:
+        slug = agent.get("slug", "unknown")
+        models.append({
+            "name": slug,
+            "model": slug,
+            "modified_at": now,
+            "size": 0,
+            "digest": "",
+            "details": {
+                "family": "agentic-core",
+                "parameter_size": "N/A",
+                "quantization_level": "N/A",
+            },
+        })
+    return web.json_response({"models": models})
+
+
+async def ollama_show(request: web.Request) -> web.Response:
+    """POST /api/show -- Return model (agent persona) metadata."""
+    body = await request.json()
+    name = body.get("name", "")
+    system_prompt = _load_agent_prompt(request.app, name)
+
+    # Try to load full agent data for richer details
+    agents_dir = request.app.get("agents_dir", "agents")
+    yaml_path = Path(agents_dir) / f"{name}.yaml"
+    agent_data: dict[str, Any] = {}
+    if yaml_path.exists():
+        with open(yaml_path) as f:
+            agent_data = yaml.safe_load(f) or {}
+
+    return web.json_response({
+        "modelfile": f"FROM agentic-core\nSYSTEM {system_prompt}",
+        "parameters": "",
+        "template": "",
+        "details": {
+            "family": "agentic-core",
+            "parameter_size": "N/A",
+            "quantization_level": "N/A",
+            "description": agent_data.get("description", ""),
+            "role": agent_data.get("role", "assistant"),
+        },
+    })
+
+
+# ---------------------------------------------------------------------------
 # WebSocket handler (proxy to same protocol as websockets transport)
 # ---------------------------------------------------------------------------
 
@@ -386,6 +722,12 @@ def create_app(
     app.router.add_get("/api/studio/config", get_studio_config)
     app.router.add_post("/api/studio/config", save_studio_config)
     app.router.add_get("/api/studio/setup-status", get_setup_status)
+
+    # --- Ollama-compatible API ---
+    app.router.add_post("/api/chat", ollama_chat)
+    app.router.add_post("/api/generate", ollama_generate)
+    app.router.add_get("/api/tags", ollama_tags)
+    app.router.add_post("/api/show", ollama_show)
 
     # --- WebSocket ---
     app.router.add_get("/ws", websocket_handler)
