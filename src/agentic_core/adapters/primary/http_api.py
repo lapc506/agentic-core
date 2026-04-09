@@ -136,11 +136,21 @@ async def get_metrics(request: web.Request) -> web.Response:
 
 
 async def spa_fallback(request: web.Request) -> web.Response:
-    """Serve index.html for any non-API path (Flutter Web SPA routing)."""
+    """Serve static file if it exists, otherwise index.html (SPA routing)."""
     static_dir: str | None = request.app.get("static_dir")
     if static_dir is None:
         return web.json_response({"error": "not found"}, status=404)
-    index = Path(static_dir) / "index.html"
+    base = Path(static_dir).resolve()
+
+    # Try to serve the requested file (e.g. flutter_bootstrap.js, main.dart.js)
+    requested = request.match_info.get("path", "")
+    if requested:
+        file_path = (base / requested).resolve()
+        if file_path.is_file() and str(file_path).startswith(str(base)):
+            return web.FileResponse(file_path)
+
+    # Fallback to index.html for SPA client-side routing
+    index = base / "index.html"
     if not index.exists():
         return web.json_response({"error": "not found"}, status=404)
     return web.FileResponse(index)
@@ -184,7 +194,7 @@ def create_app(
 
     # --- Static files + SPA fallback ---
     if static_dir and Path(static_dir).is_dir():
-        app.router.add_static("/static", static_dir)
+        app.router.add_get("/", spa_fallback)
         app.router.add_get("/{path:.*}", spa_fallback)
 
     return app
