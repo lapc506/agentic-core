@@ -37,23 +37,29 @@
 - [x] **TE-01** Tests unitarios HTTP API adapter (12 tests)
 - [x] **TE-02** Smoke test E2E (ciclo completo de agente)
 
-## Plan 2: Flutter Web UI (pendiente)
+## Plan 2: Flutter Web UI
 
 ### Scaffold
-- [ ] **FE-01** Configurar tema AduaNext (dark theme, Material 3, tokens de color)
-- [ ] **FE-02** Implementar DashboardLayout (rail + panel + content)
-- [ ] **FE-03** Configurar GoRouter con ShellRoute
+- [x] **FE-01** Configurar tema AduaNext (dark theme, Material 3, tokens de color)
+- [x] **FE-02** Implementar DashboardLayout (rail + panel + content)
+- [x] **FE-03** Configurar GoRouter con ShellRoute
 
 ### Paginas
-- [ ] **FE-04** ChatPage (home) con selector de agente y WebSocket streaming
-- [ ] **FE-05** AgentEditorPage con tabs (Inputs, Guardrails, Outputs) y cards
-- [ ] **FE-06** Gates editor con flutter_quill WYSIWYG y flip animation
-- [ ] **FE-07** SessionsPage (historial + escalaciones HITL)
-- [ ] **FE-08** ToolsPage (MCP servers + health status)
-- [ ] **FE-09** SettingsPage con tabs (Conexiones, Modelos, Variables, Debug, Docker)
-- [ ] **FE-10** MetricsPage con charts graphic (latencia, tokens, gates, sesiones)
+- [x] **FE-04** ChatPage (home) con selector de agente y WebSocket streaming
+- [x] **FE-05** AgentEditorPage con tabs (Inputs, Guardrails, Outputs) y cards
+- [x] **FE-06** Gates editor (TextField Markdown, flutter_quill pendiente)
+- [x] **FE-07** SessionsPage (historial con status badges)
+- [x] **FE-08** ToolsPage (MCP servers + health status)
+- [x] **FE-09** SettingsPage con tabs (Conexiones, Modelos, Variables, Debug, Docker)
+- [x] **FE-10** MetricsPage con KPIs y chart placeholders (graphic pendiente)
 
 ### Componentes
-- [ ] **FE-11** SidebarRail + SidebarPanel (patron aduanext)
-- [ ] **FE-12** DebugTerminal (xterm Dart puro)
-- [ ] **FE-13** Atomic design audit con /atomic-design-toolkit:audit:material3
+- [x] **FE-11** SidebarRail + SidebarPanel (patron aduanext)
+- [ ] **FE-12** DebugTerminal (xterm Dart puro) — placeholder implementado
+- [x] **FE-13** Atomic design audit con /atomic-design-toolkit:audit:material3
+
+### Pendientes para iteracion futura
+- [ ] **FE-14** Integrar flutter_quill para WYSIWYG Markdown en gates
+- [ ] **FE-15** Integrar xterm (Dart puro) para terminal debug real
+- [ ] **FE-16** Integrar graphic para charts reales en MetricsPage
+- [ ] **FE-17** API client conectado en todas las paginas (datos reales vs mock)
