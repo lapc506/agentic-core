@@ -198,30 +198,22 @@ class SandboxExecutor:
             return SandboxResult(exit_code=1, stderr=f"{runtime} not found")
 
     def _check_policy(self, command: str, policy: SandboxPolicy) -> list[str]:
-        """Pre-execution policy checks."""
+        """Pre-execution policy checks using structural command analysis."""
+        from agentic_core.application.services.command_parser import CommandParser
+
         violations: list[str] = []
 
-        # Check for denied path access
-        for denied in policy.denied_paths:
-            expanded = os.path.expanduser(denied)
-            if expanded in command or denied in command:
-                violations.append(f"Access to denied path: {denied}")
-
-        # Check shell permission
+        # Check shell permission first (cheap gate)
         if SandboxPermission.EXECUTE_SHELL not in policy.permissions:
             violations.append("Shell execution not permitted")
 
-        # Check for dangerous patterns
-        dangerous = [
-            "rm -rf /",
-            ":(){ :|:& };:",
-            "dd if=/dev/zero",
-            "mkfs.",
-            "> /dev/sd",
-        ]
-        for pattern in dangerous:
-            if pattern in command:
-                violations.append(f"Dangerous command pattern: {pattern}")
+        # Structural analysis via CommandParser
+        parser = CommandParser(
+            allowed_paths=list(policy.allowed_paths),
+            denied_paths=list(policy.denied_paths),
+        )
+        analysis = parser.analyse(command)
+        violations.extend(analysis.violation_messages)
 
         return violations
 

@@ -69,7 +69,7 @@ def test_sandbox_dangerous_commands_blocked() -> None:
         executor.execute("rm -rf /"),
     )
     assert result.exit_code == 1
-    assert any("Dangerous command pattern" in v for v in result.policy_violations)
+    assert any("dangerous_command" in v.lower() or "destructive_command" in v.lower() for v in result.policy_violations)
 
 
 def test_sandbox_local_execution_succeeds() -> None:
