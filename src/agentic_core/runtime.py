@@ -24,6 +24,7 @@ from agentic_core.application.middleware.base import MiddlewareChain, RequestCon
 from agentic_core.application.middleware.tracing import TracingMiddleware
 from agentic_core.application.queries.get_session import GetSessionHandler, GetSessionQuery
 from agentic_core.application.queries.list_personas import ListPersonasHandler, ListPersonasQuery
+from agentic_core.bootstrap import ServiceRegistry
 from agentic_core.config.settings import AgenticSettings
 from agentic_core.domain.services.routing import RoutingService
 from agentic_core.shared_kernel.events import EventBus
@@ -76,8 +77,13 @@ class _StubMemoryPort:
 class AgentRuntime:
     """Composition Root. The ONLY place that knows about concrete implementations."""
 
-    def __init__(self, settings: AgenticSettings | None = None) -> None:
+    def __init__(
+        self,
+        settings: AgenticSettings | None = None,
+        registry: ServiceRegistry | None = None,
+    ) -> None:
         self._settings = settings or AgenticSettings()
+        self._registry = registry
         self._is_running = False
 
         # Configure structured logging
@@ -86,12 +92,22 @@ class AgentRuntime:
         # Event bus
         self._event_bus = EventBus()
 
-        # Domain services
-        self._routing = RoutingService()
+        # Domain services -- prefer the registry's RoutingService (already
+        # populated with personas by bootstrap) over a fresh empty one.
+        if self._registry and self._registry.get("routing_service"):
+            self._routing = self._registry.get("routing_service")
+        else:
+            self._routing = RoutingService()
 
-        # Stub ports (Phase 1) — replaced by real adapters in Phase 2
-        session_port = _StubSessionPort()
-        memory_port = _StubMemoryPort()
+        # Ports -- use real adapters from the registry when available,
+        # otherwise fall back to in-memory stubs so the runtime can still
+        # start without external infrastructure.
+        session_port = (
+            self._registry.get("session_port") if self._registry else None
+        ) or _StubSessionPort()
+        memory_port = (
+            self._registry.get("memory_port") if self._registry else None
+        ) or _StubMemoryPort()
 
         # Command handlers
         self._create_session_handler = CreateSessionHandler(session_port, self._event_bus)  # type: ignore[arg-type]
@@ -102,9 +118,10 @@ class AgentRuntime:
         self._get_session_handler = GetSessionHandler(session_port)  # type: ignore[arg-type]
         self._list_personas_handler = ListPersonasHandler(self._routing)
 
-        # Middleware chain (Phase 1: tracing with no-op fallback only)
+        # Middleware chain -- wire OTel tracing adapter when available
+        tracing_port = self._registry.get("otel") if self._registry else None
         self._middleware = MiddlewareChain(
-            [TracingMiddleware(tracing_port=None)],
+            [TracingMiddleware(tracing_port=tracing_port)],
             handler=self._noop_handler,
         )
 
@@ -182,6 +199,7 @@ class AgentRuntime:
             agents_dir=self._settings.personas_dir,
             static_dir=self._settings.static_dir,
             settings=self._settings,
+            registry=self._registry,
         )
         self._http_runner = web.AppRunner(self._http_app)
         await self._http_runner.setup()
@@ -228,13 +246,23 @@ class AgentRuntime:
 
 async def _main() -> None:
     settings = AgenticSettings()
-    runtime = AgentRuntime(settings)
+
+    # Bootstrap all adapters and services
+    from agentic_core.bootstrap import bootstrap  # noqa: C0415
+
+    registry = await bootstrap(settings)
+
+    runtime = AgentRuntime(settings, registry=registry)
     await runtime.start()
     try:
         await asyncio.Event().wait()  # Run forever
     except (KeyboardInterrupt, SystemExit):
         pass
     finally:
+        # Flush observability before shutdown
+        langfuse = registry.get("langfuse")
+        if langfuse:
+            langfuse.flush()
         await runtime.stop()
 
 

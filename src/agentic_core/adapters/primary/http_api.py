@@ -633,7 +633,10 @@ async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
                 await ws.send_json({"type": "stream_start", "session_id": session_id})
 
                 provider = _load_provider_config(request.app)
+                output_token_count = 0
+                model_name = "unknown"
                 if provider and provider.get("baseUrl"):
+                    model_name = provider.get("model", "unknown")
                     try:
                         from langchain_core.messages import HumanMessage, SystemMessage
                         from langchain_openai import ChatOpenAI
@@ -653,6 +656,7 @@ async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
 
                         async for chunk in llm.astream(messages):
                             if chunk.content:
+                                output_token_count += 1
                                 await ws.send_json({
                                     "type": "stream_token",
                                     "session_id": session_id,
@@ -676,6 +680,22 @@ async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
                     })
 
                 await ws.send_json({"type": "stream_end", "session_id": session_id})
+
+                # Record generation to Langfuse (fire-and-forget)
+                langfuse = request.app.get("langfuse")
+                if langfuse:
+                    try:
+                        await langfuse.record_generation(
+                            model=model_name,
+                            input_tokens=len(content) // 4,
+                            output_tokens=output_token_count,
+                            metadata={
+                                "session_id": session_id,
+                                "persona_id": persona_id,
+                            },
+                        )
+                    except Exception:
+                        _log.debug("Langfuse record_generation failed", exc_info=True)
 
             elif msg_type == "close_session":
                 session_id = data.get("session_id", "")
@@ -738,6 +758,37 @@ async def spa_fallback(request: web.Request) -> web.Response:
 
 
 # ---------------------------------------------------------------------------
+# CORS middleware
+# ---------------------------------------------------------------------------
+
+
+@web.middleware
+async def cors_middleware(
+    request: web.Request,
+    handler: Any,
+) -> web.Response:
+    """Add CORS headers for allowed origins.
+
+    Preflight (OPTIONS) requests receive a plain 200 response with the
+    appropriate headers; all other requests are forwarded to the handler
+    and the CORS headers are attached to the response.
+    """
+    if request.method == "OPTIONS":
+        response = web.Response()
+    else:
+        response = await handler(request)
+
+    origin = request.headers.get("Origin", "")
+    allowed = _get_allowed_origins(request.app)
+    if origin and any(origin == a or origin.startswith(a) for a in allowed):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+
+    return response
+
+
+# ---------------------------------------------------------------------------
 # Application factory
 # ---------------------------------------------------------------------------
 
@@ -746,15 +797,23 @@ def create_app(
     agents_dir: str,
     static_dir: str | None = None,
     settings: dict[str, Any] | None = None,
+    registry: Any | None = None,
 ) -> web.Application:
     """Build and return an aiohttp ``Application`` wired to CQRS handlers."""
 
-    app = web.Application()
+    app = web.Application(middlewares=[cors_middleware])
 
     # Store references on app dict
     app["agents_dir"] = agents_dir
     app["static_dir"] = static_dir
     app["settings"] = settings
+
+    # Bootstrap service registry -- gives handlers access to Langfuse, etc.
+    if registry is not None:
+        app["registry"] = registry
+        langfuse = registry.get("langfuse")
+        if langfuse is not None:
+            app["langfuse"] = langfuse
     app["list_agents_handler"] = ListAgentsHandler(agents_dir)
     app["create_agent_handler"] = CreateAgentHandler(agents_dir)
     app["update_agent_handler"] = UpdateAgentHandler(agents_dir)
@@ -762,10 +821,16 @@ def create_app(
     app["get_metrics_handler"] = GetMetricsHandler()
 
     # --- A2A server ---
+    if settings and isinstance(settings, dict):
+        _http_port = settings.get("http_port", 8080)
+    elif settings and hasattr(settings, "http_port"):
+        _http_port = settings.http_port
+    else:
+        _http_port = 8080
     a2a_server = A2AServer(AgentCard(
         name="Agent Studio",
         description="Visual agent configuration and orchestration",
-        url=f"http://localhost:{settings.get('http_port', 8080) if settings else 8080}",
+        url=f"http://localhost:{_http_port}",
         capabilities=["chat", "task_delegation", "streaming"],
     ))
     app["a2a_server"] = a2a_server

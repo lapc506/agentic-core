@@ -2,9 +2,43 @@
 
 from __future__ import annotations
 
+import logging
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Path validation helpers
+# ---------------------------------------------------------------------------
+
+DENIED_PATTERNS = [
+    ".env", ".git/config", ".ssh/", "/etc/passwd", "/etc/shadow",
+    "id_rsa", "id_ed25519", ".aws/credentials", ".docker/config.json",
+]
+
+
+def _validate_path(path: str, workspace_root: str) -> Path:
+    """Resolve *path* and ensure it stays inside *workspace_root*.
+
+    Raises ``PermissionError`` for traversal attempts or access to
+    sensitive paths listed in ``DENIED_PATTERNS``.
+    """
+    p = Path(path).resolve()
+    workspace = Path(workspace_root).resolve()
+    if not str(p).startswith(str(workspace)):
+        raise PermissionError(f"Path outside workspace: {path}")
+    for denied in DENIED_PATTERNS:
+        if denied in str(p).lower():
+            raise PermissionError(f"Access denied: {denied}")
+    return p
+
+
+# ---------------------------------------------------------------------------
+# File tools
+# ---------------------------------------------------------------------------
 
 
 class FileReadTool:
@@ -12,8 +46,15 @@ class FileReadTool:
 
     name = "read_file"
 
+    def __init__(self, workspace_root: str | None = None) -> None:
+        self._workspace_root = workspace_root or os.getcwd()
+
     async def execute(self, path: str, start_line: int = 0, end_line: int = 0) -> dict[str, Any]:
-        p = Path(path)
+        try:
+            p = _validate_path(path, self._workspace_root)
+        except PermissionError as exc:
+            return {"error": str(exc)}
+
         if not p.exists():
             return {"error": f"File not found: {path}"}
         if not p.is_file():
@@ -26,7 +67,7 @@ class FileReadTool:
         return {
             "content": "\n".join(lines),
             "total_lines": len(p.read_text().splitlines()),
-            "path": str(p.resolve()),
+            "path": str(p),
         }
 
 
@@ -35,8 +76,14 @@ class FileEditTool:
 
     name = "edit_file"
 
+    def __init__(self, workspace_root: str | None = None) -> None:
+        self._workspace_root = workspace_root or os.getcwd()
+
     async def execute(self, path: str, old_str: str, new_str: str) -> dict[str, Any]:
-        p = Path(path)
+        try:
+            p = _validate_path(path, self._workspace_root)
+        except PermissionError as exc:
+            return {"error": str(exc)}
 
         if not old_str:
             # Create new file or append
@@ -59,6 +106,11 @@ class FileEditTool:
         content = content.replace(old_str, new_str, 1)
         p.write_text(content)
         return {"status": "OK", "action": "edit"}
+
+
+# ---------------------------------------------------------------------------
+# Non-file tools
+# ---------------------------------------------------------------------------
 
 
 class ListFilesTool:
@@ -100,11 +152,61 @@ class CodeSearchTool:
 
 
 class BashTool:
-    """Execute a bash command with timeout and output capture."""
+    """Execute a bash command with timeout and output capture.
+
+    Execution is routed through ``SandboxExecutor`` when available.
+    If no sandbox is present, raw subprocess is only used when the
+    ``AGENTIC_UNSAFE_SHELL`` environment variable is set to ``"true"``.
+    """
 
     name = "bash"
 
+    def __init__(self) -> None:
+        self._sandbox = self._try_create_sandbox()
+
+    @staticmethod
+    def _try_create_sandbox():  # type: ignore[return]
+        """Attempt to instantiate a SandboxExecutor; return None on failure."""
+        try:
+            from agentic_core.application.services.sandbox_executor import (
+                SandboxExecutor,
+                SandboxPermission,
+                SandboxPolicy,
+            )
+
+            policy = SandboxPolicy(
+                permissions={
+                    SandboxPermission.EXECUTE_SHELL,
+                    SandboxPermission.READ_FILESYSTEM,
+                    SandboxPermission.WRITE_FILESYSTEM,
+                },
+            )
+            return SandboxExecutor(default_policy=policy)
+        except Exception:  # pragma: no cover
+            logger.debug("SandboxExecutor unavailable; BashTool will require opt-in")
+            return None
+
     async def execute(self, command: str, timeout: int = 60) -> dict[str, Any]:
+        # Prefer sandbox execution path
+        if self._sandbox is not None:
+            result = await self._sandbox.execute(command)
+            return {
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "exit_code": result.exit_code,
+                **({"policy_violations": result.policy_violations} if result.policy_violations else {}),
+            }
+
+        # Fallback: only allow raw subprocess with explicit opt-in
+        if os.environ.get("AGENTIC_UNSAFE_SHELL", "").lower() != "true":
+            return {
+                "error": (
+                    "Shell execution blocked: no sandbox available. "
+                    "Set AGENTIC_UNSAFE_SHELL=true to allow raw subprocess execution."
+                ),
+                "exit_code": -1,
+            }
+
         try:
             result = subprocess.run(
                 command, shell=True, capture_output=True, text=True, timeout=timeout,

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import time
 from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
+import jwt as pyjwt
 import pytest
 import uuid_utils
 
@@ -12,6 +14,8 @@ from agentic_core.application.middleware.metrics import MetricsMiddleware
 from agentic_core.application.middleware.pii_redaction import PIIRedactionMiddleware, redact_pii
 from agentic_core.application.middleware.rate_limit import RateLimitExceeded, RateLimitMiddleware
 from agentic_core.domain.value_objects.messages import AgentMessage
+
+AgentMessage.model_rebuild()
 
 
 def _msg(content: str = "hello", **meta: object) -> AgentMessage:
@@ -99,9 +103,11 @@ async def test_auth_invalid_api_key():
 
 
 async def test_auth_jwt_passthrough():
-    mw = AuthMiddleware(api_keys={"key"})
+    secret = "test-secret-key-that-is-long-enough-for-hs256"
+    token = pyjwt.encode({"user_id": "jwt_user", "exp": time.time() + 3600}, secret, algorithm="HS256")
+    mw = AuthMiddleware(api_keys={"key"}, jwt_secret=secret)
     chain = MiddlewareChain([mw], _echo)
-    msg = _msg(authorization="Bearer token123")
+    msg = _msg(authorization=f"Bearer {token}")
     ctx = RequestContext()
     await chain(msg, ctx)
     assert ctx.user_id == "jwt_user"
