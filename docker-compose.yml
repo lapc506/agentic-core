@@ -1,0 +1,53 @@
+# Standalone Agent Studio — docker compose up → localhost:8765
+services:
+  agentic-core:
+    build:
+      context: .
+      dockerfile: deployment/docker/Dockerfile
+    ports:
+      - "8765:8765"
+    environment:
+      AGENTIC_MODE: standalone
+      AGENTIC_REDIS_URL: redis://redis:6379
+      AGENTIC_POSTGRES_DSN: postgresql://agentic:agentic@postgres:5432/agentic
+      AGENTIC_FALKORDB_URL: redis://falkordb:6380
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      falkordb:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: agentic
+      POSTGRES_PASSWORD: agentic
+      POSTGRES_DB: agentic
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentic"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  falkordb:
+    image: falkordb/falkordb:latest
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6379", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  pgdata:
