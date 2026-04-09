@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../main.dart' show themeNotifier;
 import '../../../theme/agent_studio_theme.dart';
 import '../organisms/sidebar_rail.dart';
 import '../organisms/sidebar_panel.dart';
@@ -30,16 +31,21 @@ class _DashboardLayoutState extends State<DashboardLayout> {
     return Scaffold(
       body: Row(
         children: [
-          SidebarRail(
-            selectedIndex: widget.selectedSection,
-            onSelected: (i) {
-              if (i == widget.selectedSection) {
-                setState(() => _panelExpanded = !_panelExpanded);
-              } else {
-                widget.onSectionChanged(i);
-                setState(() => _panelExpanded = true);
-              }
-            },
+          ValueListenableBuilder<bool>(
+            valueListenable: themeNotifier,
+            builder: (context, isDark, _) => SidebarRail(
+              selectedIndex: widget.selectedSection,
+              isDarkMode: isDark,
+              onThemeToggle: () => themeNotifier.value = !themeNotifier.value,
+              onSelected: (i) {
+                if (i == widget.selectedSection) {
+                  setState(() => _panelExpanded = !_panelExpanded);
+                } else {
+                  widget.onSectionChanged(i);
+                  setState(() => _panelExpanded = true);
+                }
+              },
+            ),
           ),
           if (showPanel)
             Container(

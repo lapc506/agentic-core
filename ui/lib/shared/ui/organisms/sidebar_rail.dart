@@ -6,10 +6,14 @@ class SidebarRail extends StatelessWidget {
     super.key,
     required this.selectedIndex,
     required this.onSelected,
+    this.isDarkMode = true,
+    this.onThemeToggle,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onSelected;
+  final bool isDarkMode;
+  final VoidCallback? onThemeToggle;
 
   static const sections = [
     (icon: Icons.chat_bubble_outline, label: 'Chat'),
@@ -61,6 +65,27 @@ class SidebarRail extends StatelessWidget {
             );
           }),
           const Spacer(),
+          // Theme toggle (sol/luna)
+          Tooltip(
+            message: isDarkMode ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro',
+            child: InkWell(
+              onTap: onThemeToggle,
+              child: Container(
+                width: 36, height: 36,
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: AgentStudioTheme.card,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                  size: 18,
+                  color: isDarkMode ? AgentStudioTheme.warning : AgentStudioTheme.primary,
+                ),
+              ),
+            ),
+          ),
+          // User avatar
           const CircleAvatar(
             radius: 16,
             backgroundColor: AgentStudioTheme.primary,

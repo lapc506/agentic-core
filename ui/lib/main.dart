@@ -13,6 +13,9 @@ class AgentStudioApp extends StatefulWidget {
   State<AgentStudioApp> createState() => _AgentStudioAppState();
 }
 
+// Global theme notifier so sidebar can toggle it
+final themeNotifier = ValueNotifier<bool>(true); // true = dark
+
 class _AgentStudioAppState extends State<AgentStudioApp> {
   bool _checkingSetup = true;
   bool _needsOnboarding = false;
@@ -42,10 +45,12 @@ class _AgentStudioAppState extends State<AgentStudioApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
+    return ValueListenableBuilder<bool>(
+      valueListenable: themeNotifier,
+      builder: (context, isDark, _) => MaterialApp.router(
       title: 'Agent Studio',
       debugShowCheckedModeBanner: false,
-      theme: AgentStudioTheme.darkTheme,
+      theme: isDark ? AgentStudioTheme.darkTheme : AgentStudioTheme.lightTheme,
       routerConfig: router,
       builder: (context, child) {
         if (_checkingSetup) {
@@ -68,6 +73,6 @@ class _AgentStudioAppState extends State<AgentStudioApp> {
           ],
         );
       },
-    );
+    ));
   }
 }

@@ -31,6 +31,45 @@ class AgentStudioTheme {
   static const gateBlue = Color(0xFF3B6FE0);
   static const gateRed = Color(0xFFEF5350);
 
+  static ThemeData get lightTheme {
+    return ThemeData.light(useMaterial3: true).copyWith(
+      scaffoldBackgroundColor: const Color(0xFFF5F5FA),
+      colorScheme: const ColorScheme.light(
+        primary: primary,
+        surface: Color(0xFFFFFFFF),
+        onSurface: Color(0xFF1A1A2E),
+        outline: Color(0xFFD0D0E0),
+      ),
+      textTheme: GoogleFonts.ubuntuTextTheme(ThemeData.light().textTheme),
+      dividerColor: const Color(0xFFD0D0E0),
+      cardTheme: const CardThemeData(
+        color: Color(0xFFFFFFFF),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+          side: BorderSide(color: Color(0xFFD0D0E0)),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFFF0F0F8),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: Color(0xFFD0D0E0)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: const BorderSide(color: Color(0xFFD0D0E0)),
+        ),
+      ),
+      tabBarTheme: const TabBarThemeData(
+        labelColor: primary,
+        unselectedLabelColor: Color(0xFF888899),
+        indicatorColor: primary,
+      ),
+    );
+  }
+
   static ThemeData get darkTheme {
     return ThemeData.dark(useMaterial3: true).copyWith(
       scaffoldBackgroundColor: content,
