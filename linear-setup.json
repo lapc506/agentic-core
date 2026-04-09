@@ -1,0 +1,19 @@
+{
+  "team": {
+    "key": "AC",
+    "name": "Agentic Core"
+  },
+  "git": {
+    "baseBranch": "main",
+    "branchPattern": "{type}/{issue-id}-{short-description}"
+  },
+  "defaults": {
+    "greptileReview": false,
+    "squashMerge": true,
+    "slackNotify": false
+  },
+  "openspec": {
+    "specLibraryPath": "openspec/specs",
+    "changesPath": "openspec/changes"
+  }
+}
