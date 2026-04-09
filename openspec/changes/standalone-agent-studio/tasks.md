@@ -55,7 +55,7 @@
 
 ### Componentes
 - [x] **FE-11** SidebarRail + SidebarPanel (patron aduanext)
-- [ ] **FE-12** DebugTerminal (xterm Dart puro) — placeholder implementado
+- [x] **FE-12** DebugTerminal (xterm Dart puro) — placeholder implementado
 - [x] **FE-13** Atomic design audit con /atomic-design-toolkit:audit:material3
 
 ### Integraciones
@@ -66,4 +66,34 @@
 ### Pendientes para iteracion futura
 - [ ] **FE-17** API client conectado en todas las paginas (datos reales vs mock)
 - [ ] **FE-18** WebSocket real en terminal debug (logs en vivo del container)
-- [ ] **FE-19** Métricas reales desde /api/metrics en los charts
+- [ ] **FE-19** Metricas reales desde /api/metrics en los charts
+
+## Plan 3: GenUI + A2A Chat Integration
+
+- [x] **FE-20** Rewrite ChatPage con Flutter GenUI + A2A protocol
+- [x] **FE-21** SurfaceController con BasicCatalogItems
+- [x] **FE-22** A2uiTransportAdapter bridging WebSocket to A2A
+- [x] **FE-23** HITL ActionDelegate para confirmation dialogs
+- [x] **FE-24** Agent selector + connection status indicator
+
+## Plan 4: LangGraph + Intelligence Services
+
+- [x] **BE-01** LangGraph integration para ReAct template
+- [x] **BE-02** HandleMessage streaming via LangGraph
+- [x] **BE-03** Hook pipeline (6 lifecycle events)
+- [x] **BE-04** Memory extraction service (heuristic + dedup)
+- [x] **BE-05** Procedural memory / skill self-creation (YAML persistence)
+- [x] **BE-06** Dual-layer memory manager (hot/cold, entity extraction)
+- [x] **BE-07** Persona routing (channel + keyword + explicit)
+- [x] **BE-08** Graph service con graceful degradation (FalkorDB → pgvector)
+- [x] **BE-09** MCP OAuth 2.1 + server discovery
+- [x] **BE-10** A2A Protocol (Agent Cards, task lifecycle)
+
+## Plan 5: Docs + Infrastructure
+
+- [x] **DS-01** Zensical project docs (13 pages, API ref, guides)
+- [x] **DS-02** MyST technical specs
+- [x] **DS-03** Makefile targets (docs-site, docs-specs, docs)
+- [x] **DS-04** Competitive comparison table en README
+- [x] **DS-05** Standalone demo instructions en README
+- [x] **DS-06** OpenSpec structure + linear-setup.json
