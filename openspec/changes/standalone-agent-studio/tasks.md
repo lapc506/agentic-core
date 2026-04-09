@@ -58,8 +58,12 @@
 - [ ] **FE-12** DebugTerminal (xterm Dart puro) — placeholder implementado
 - [x] **FE-13** Atomic design audit con /atomic-design-toolkit:audit:material3
 
+### Integraciones
+- [x] **FE-14** Integrar flutter_quill para WYSIWYG Markdown en gates
+- [x] **FE-15** Integrar xterm (Dart puro) para terminal debug real
+- [x] **FE-16** Integrar graphic para charts reales en MetricsPage
+
 ### Pendientes para iteracion futura
-- [ ] **FE-14** Integrar flutter_quill para WYSIWYG Markdown en gates
-- [ ] **FE-15** Integrar xterm (Dart puro) para terminal debug real
-- [ ] **FE-16** Integrar graphic para charts reales en MetricsPage
 - [ ] **FE-17** API client conectado en todas las paginas (datos reales vs mock)
+- [ ] **FE-18** WebSocket real en terminal debug (logs en vivo del container)
+- [ ] **FE-19** Métricas reales desde /api/metrics en los charts
