@@ -12,6 +12,9 @@ services:
       AGENTIC_REDIS_URL: redis://redis:6379
       AGENTIC_POSTGRES_DSN: postgresql://agentic:agentic@postgres:5432/agentic
       AGENTIC_FALKORDB_URL: redis://falkordb:6380
+    volumes:
+      - agents:/app/agents
+      - studio_config:/app/config
     depends_on:
       redis:
         condition: service_healthy
@@ -52,3 +55,5 @@ services:
 
 volumes:
   pgdata:
+  agents:
+  studio_config:

@@ -27,9 +27,12 @@ class ChatPanelContent extends StatelessWidget {
         _sectionHeader('CONVERSACIONES'),
         _panelItem('+ Nueva conversación', selected: true),
         const SizedBox(height: 16),
-        _sectionHeader('HOY'),
-        _panelItem('Clasificar partida 8471...', subtitle: 'Asistente · 2m'),
-        _panelItem('Calcular CIF importación', subtitle: 'Asistente · 1h'),
+        _sectionHeader('RECIENTES'),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Text('No hay conversaciones aún',
+            style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12, fontStyle: FontStyle.italic)),
+        ),
       ],
     );
   }
