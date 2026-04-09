@@ -13,7 +13,7 @@ class SidebarRail extends StatelessWidget {
 
   static const sections = [
     (icon: Icons.chat_bubble_outline, label: 'Chat'),
-    (icon: Icons.person_outline, label: 'Cliente'),
+    (icon: Icons.person_outline, label: 'Agent Personas'),
     (icon: Icons.rule, label: 'Reglas'),
     (icon: Icons.history, label: 'Sesiones'),
     (icon: Icons.build_outlined, label: 'Herramientas'),

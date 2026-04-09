@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:xterm/xterm.dart';
 import '../../theme/agent_studio_theme.dart';
 import '../../services/api_client.dart';
@@ -113,34 +114,187 @@ class _ConnectionsTab extends StatelessWidget {
   }
 }
 
-class _ModelsTab extends StatelessWidget {
+class _ModelsTab extends StatefulWidget {
+  @override
+  State<_ModelsTab> createState() => _ModelsTabState();
+}
+
+class _ModelsTabState extends State<_ModelsTab> {
+  final List<Map<String, String>> _providers = [
+    {'name': 'Anthropic', 'type': 'anthropic', 'model': 'claude-sonnet-4-6', 'baseUrl': 'https://api.anthropic.com', 'status': 'active'},
+  ];
+
+  void _addProvider(Map<String, String> provider) {
+    setState(() => _providers.add(provider));
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        _modelRow('Default', 'anthropic / claude-sonnet-4-6', true),
-        _modelRow('Embedding', 'google / text-embedding-004', false),
+        Row(
+          children: [
+            const Text('Inference Providers', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+            const Spacer(),
+            FilledButton.icon(
+              onPressed: () => _showAddProviderDialog(context),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Agregar provider', style: TextStyle(fontSize: 12)),
+              style: FilledButton.styleFrom(backgroundColor: AgentStudioTheme.primary),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const Text('Configura providers de inferencia LLM. Todos los compatibles con OpenAI API funcionan.',
+          style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12)),
+        const SizedBox(height: 16),
+
+        // Provider presets
+        const Text('PRESETS', style: TextStyle(color: AgentStudioTheme.primary, fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _presetChip('Ollama (local)', 'http://localhost:11434/v1', 'llama3.1'),
+            _presetChip('LMStudio', 'http://localhost:1234/v1', 'loaded-model'),
+            _presetChip('Fireworks.ai', 'https://api.fireworks.ai/inference/v1', 'accounts/fireworks/models/kimi-k2p5'),
+            _presetChip('NVIDIA NIM', 'https://integrate.api.nvidia.com/v1', 'meta/llama-3.1-70b-instruct'),
+            _presetChip('OpenRouter', 'https://openrouter.ai/api/v1', 'anthropic/claude-sonnet-4'),
+            _presetChip('Together AI', 'https://api.together.xyz/v1', 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo'),
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        // Configured providers
+        const Text('CONFIGURADOS', style: TextStyle(color: AgentStudioTheme.primary, fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1)),
+        const SizedBox(height: 8),
+        ..._providers.map((p) => _providerCard(p)),
       ],
     );
   }
 
-  Widget _modelRow(String label, String model, bool active) {
+  Widget _presetChip(String name, String baseUrl, String model) {
+    return ActionChip(
+      label: Text(name, style: const TextStyle(fontSize: 11, color: AgentStudioTheme.textPrimary)),
+      avatar: const Icon(Icons.add_circle_outline, size: 14, color: AgentStudioTheme.primary),
+      backgroundColor: AgentStudioTheme.card,
+      side: const BorderSide(color: AgentStudioTheme.border),
+      onPressed: () {
+        _addProvider({
+          'name': name,
+          'type': 'openai',
+          'model': model,
+          'baseUrl': baseUrl,
+          'status': 'configured',
+        });
+      },
+    );
+  }
+
+  Widget _providerCard(Map<String, String> p) {
+    final isActive = p['status'] == 'active';
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: AgentStudioTheme.card, border: Border.all(color: AgentStudioTheme.border), borderRadius: BorderRadius.circular(8)),
-      child: Row(children: [
-        Text(label, style: const TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12)),
-        const SizedBox(width: 16),
-        Text(model, style: const TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 14)),
-        const Spacer(),
-        if (active) Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(color: const Color(0xFF1a2e1a), borderRadius: BorderRadius.circular(4)),
-          child: const Text('Active', style: TextStyle(color: AgentStudioTheme.success, fontSize: 10)),
+      decoration: BoxDecoration(
+        color: AgentStudioTheme.card,
+        border: Border.all(color: isActive ? AgentStudioTheme.primary : AgentStudioTheme.border),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(isActive ? Icons.check_circle : Icons.circle_outlined, size: 16,
+              color: isActive ? AgentStudioTheme.success : AgentStudioTheme.textSecondary),
+            const SizedBox(width: 8),
+            Text(p['name']!, style: const TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(color: AgentStudioTheme.content, borderRadius: BorderRadius.circular(4)),
+              child: Text(p['type']!, style: const TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 10)),
+            ),
+            const Spacer(),
+            if (isActive) Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(color: const Color(0xFF1a2e1a), borderRadius: BorderRadius.circular(4)),
+              child: const Text('Default', style: TextStyle(color: AgentStudioTheme.success, fontSize: 10)),
+            ),
+            if (!isActive) TextButton(
+              onPressed: () {},
+              child: const Text('Set Default', style: TextStyle(color: AgentStudioTheme.primary, fontSize: 11)),
+            ),
+          ]),
+          const SizedBox(height: 8),
+          Row(children: [
+            const Text('Model: ', style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12)),
+            Text(p['model']!, style: const TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 12, fontFamily: 'monospace')),
+          ]),
+          Row(children: [
+            const Text('Base URL: ', style: TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12)),
+            Text(p['baseUrl']!, style: const TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 12, fontFamily: 'monospace')),
+          ]),
+        ],
+      ),
+    );
+  }
+
+  void _showAddProviderDialog(BuildContext context) {
+    final nameCtrl = TextEditingController();
+    final urlCtrl = TextEditingController();
+    final modelCtrl = TextEditingController();
+    final keyCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AgentStudioTheme.card,
+        title: const Text('Agregar Inference Provider', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 16)),
+        content: SizedBox(
+          width: 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameCtrl, style: const TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 13),
+                decoration: const InputDecoration(labelText: 'Nombre', labelStyle: TextStyle(color: AgentStudioTheme.textSecondary))),
+              const SizedBox(height: 8),
+              TextField(controller: urlCtrl, style: const TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 13),
+                decoration: const InputDecoration(labelText: 'Base URL (OpenAI compatible)', hintText: 'http://localhost:11434/v1',
+                  labelStyle: TextStyle(color: AgentStudioTheme.textSecondary), hintStyle: TextStyle(color: AgentStudioTheme.border))),
+              const SizedBox(height: 8),
+              TextField(controller: modelCtrl, style: const TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 13),
+                decoration: const InputDecoration(labelText: 'Modelo', hintText: 'llama3.1',
+                  labelStyle: TextStyle(color: AgentStudioTheme.textSecondary), hintStyle: TextStyle(color: AgentStudioTheme.border))),
+              const SizedBox(height: 8),
+              TextField(controller: keyCtrl, obscureText: true, style: const TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 13),
+                decoration: const InputDecoration(labelText: 'API Key (opcional para local)', labelStyle: TextStyle(color: AgentStudioTheme.textSecondary))),
+            ],
+          ),
         ),
-      ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar', style: TextStyle(color: AgentStudioTheme.textSecondary))),
+          FilledButton(
+            onPressed: () {
+              if (nameCtrl.text.isNotEmpty && urlCtrl.text.isNotEmpty) {
+                _addProvider({
+                  'name': nameCtrl.text,
+                  'type': 'openai',
+                  'model': modelCtrl.text,
+                  'baseUrl': urlCtrl.text,
+                  'status': 'configured',
+                });
+                Navigator.pop(ctx);
+              }
+            },
+            style: FilledButton.styleFrom(backgroundColor: AgentStudioTheme.primary),
+            child: const Text('Agregar'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -260,6 +414,10 @@ class _DebugTabState extends State<_DebugTab> {
           Expanded(
             child: TerminalView(
               _terminal,
+              textStyle: TerminalStyle(
+                fontFamily: GoogleFonts.ubuntuMono().fontFamily!,
+                fontSize: 13,
+              ),
               theme: const TerminalTheme(
                 cursor: Color(0xFF3B6FE0),
                 selection: Color(0x403B6FE0),

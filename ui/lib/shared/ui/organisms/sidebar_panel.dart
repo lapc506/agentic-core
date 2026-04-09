@@ -43,7 +43,7 @@ class AgentsPanelContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionHeader('CLIENTE'),
+        _sectionHeader('AGENT PERSONAS'),
         for (final agent in agents)
           _panelItem(agent['name'] as String? ?? 'Agent',
             subtitle: agent['graph_template'] as String? ?? 'react'),
