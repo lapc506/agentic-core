@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:logging/logging.dart';
 import '../../services/api_client.dart';
 import '../../theme/agent_studio_theme.dart';
 
@@ -15,6 +16,7 @@ class OnboardingDialog extends StatefulWidget {
 }
 
 class _OnboardingDialogState extends State<OnboardingDialog> {
+  static final _log = Logger('OnboardingDialog');
   int _step = 0; // 0 = welcome, 1 = provider, 2 = agent, 3 = done
   String _selectedProvider = 'openrouter_free';
   final _apiKeyCtrl = TextEditingController();
@@ -61,6 +63,7 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
   };
 
   Future<void> _saveAndFinish() async {
+    _log.info('Onboarding: saving config with provider=$_selectedProvider');
     setState(() => _saving = true);
     final preset = _presets[_selectedProvider]!;
 
@@ -103,14 +106,17 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
           'graph_template': 'react',
         }),
       );
-    } catch (_) {
+    } catch (e) {
       // If backend is unavailable, still dismiss
+      _log.warning('Onboarding save failed (continuing anyway): $e');
     }
 
+    _log.info('Onboarding complete');
     widget.onComplete();
   }
 
   Future<void> _skipWithDefaults() async {
+    _log.info('Onboarding: skipping with defaults');
     setState(() => _saving = true);
     try {
       // Create default agent from defaults
@@ -124,7 +130,10 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
           'graph_template': 'react',
         }),
       );
-    } catch (_) {}
+    } catch (e) {
+      _log.warning('Default agent creation failed: $e');
+    }
+    _log.info('Onboarding skipped with defaults');
     widget.onComplete();
   }
 
@@ -194,7 +203,10 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
             ),
             const SizedBox(width: 12),
             FilledButton(
-              onPressed: () => setState(() => _step = 1),
+              onPressed: () {
+                _log.info('Onboarding step: welcome -> provider selection');
+                setState(() => _step = 1);
+              },
               style: FilledButton.styleFrom(backgroundColor: AgentStudioTheme.primary),
               child: const Text('Configurar', style: TextStyle(fontSize: 13)),
             ),
@@ -260,7 +272,10 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
             ),
             const SizedBox(width: 8),
             FilledButton(
-              onPressed: () => setState(() => _step = 2),
+              onPressed: () {
+                _log.info('Onboarding step: provider selection -> agent creation (provider=$_selectedProvider)');
+                setState(() => _step = 2);
+              },
               style: FilledButton.styleFrom(backgroundColor: AgentStudioTheme.primary),
               child: const Text('Siguiente'),
             ),

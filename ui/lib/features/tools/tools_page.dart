@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 import '../../theme/agent_studio_theme.dart';
 import '../../services/api_client.dart';
 
@@ -10,6 +11,7 @@ class ToolsPage extends StatefulWidget {
 }
 
 class _ToolsPageState extends State<ToolsPage> {
+  static final _log = Logger('ToolsPage');
   final _api = ApiClient();
   List<Map<String, dynamic>> _tools = [];
   bool _loading = true;
@@ -22,13 +24,16 @@ class _ToolsPageState extends State<ToolsPage> {
   }
 
   Future<void> _loadTools() async {
+    _log.info('Loading tools...');
     try {
       final tools = await _api.listTools();
+      _log.fine('Loaded ${tools.length} tools');
       setState(() {
         _tools = tools;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
+      _log.warning('Failed to load tools: $e');
       setState(() {
         _loading = false;
         _error = 'No se pudo conectar al API.';

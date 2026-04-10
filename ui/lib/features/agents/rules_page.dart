@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 import '../../theme/agent_studio_theme.dart';
 
 class RulesPage extends StatefulWidget {
@@ -10,6 +11,7 @@ class RulesPage extends StatefulWidget {
 }
 
 class _RulesPageState extends State<RulesPage> {
+  static final _log = Logger('RulesPage');
   final List<Map<String, dynamic>> _rules = [
     {
       'name': 'Idioma de respuesta',
@@ -173,6 +175,7 @@ class _RulesPageState extends State<RulesPage> {
   }
 
   void _addRule() {
+    _log.info('Opening add rule dialog for agent: ${widget.agentSlug}');
     final nameCtrl = TextEditingController();
     final descCtrl = TextEditingController();
     String selectedType = 'behavior';
@@ -235,6 +238,7 @@ class _RulesPageState extends State<RulesPage> {
             FilledButton(
               onPressed: () {
                 if (nameCtrl.text.isNotEmpty) {
+                  _log.info('Adding rule: ${nameCtrl.text} (type=$selectedType)');
                   setState(() {
                     _rules.add({
                       'name': nameCtrl.text,

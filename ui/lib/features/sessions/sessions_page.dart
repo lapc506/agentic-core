@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 import '../../theme/agent_studio_theme.dart';
 import '../../services/api_client.dart';
 
@@ -10,6 +11,7 @@ class SessionsPage extends StatefulWidget {
 }
 
 class _SessionsPageState extends State<SessionsPage> {
+  static final _log = Logger('SessionsPage');
   final _api = ApiClient();
   List<Map<String, dynamic>> _sessions = [];
   bool _loading = true;
@@ -28,13 +30,16 @@ class _SessionsPageState extends State<SessionsPage> {
   }
 
   Future<void> _loadSessions() async {
+    _log.info('Loading sessions...');
     try {
       final sessions = await _api.listSessions();
+      _log.fine('Loaded ${sessions.length} sessions');
       setState(() {
         _sessions = sessions;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
+      _log.warning('Failed to load sessions: $e');
       setState(() {
         _loading = false;
         _error = 'No se pudo conectar al API.';

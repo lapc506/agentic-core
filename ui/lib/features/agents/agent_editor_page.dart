@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 import '../../services/api_client.dart';
 import '../../services/soul_md_generator.dart';
 import '../../theme/agent_studio_theme.dart';
@@ -17,6 +18,7 @@ class AgentEditorPage extends StatefulWidget {
 
 class _AgentEditorPageState extends State<AgentEditorPage>
     with SingleTickerProviderStateMixin {
+  static final _log = Logger('AgentEditor');
   final _api = ApiClient();
   late TabController _tabController;
   Map<String, dynamic> _agent = {};
@@ -32,15 +34,18 @@ class _AgentEditorPageState extends State<AgentEditorPage>
   }
 
   Future<void> _loadAgent() async {
+    _log.info('Loading agent: ${widget.agentSlug}');
     try {
       final agent = await _api.getAgent(widget.agentSlug);
       final gates = await _api.getGates(widget.agentSlug);
+      _log.info('Agent loaded: ${widget.agentSlug} with ${gates.length} gates');
       setState(() {
         _agent = agent;
         _gates = gates.cast<Map<String, dynamic>>();
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
+      _log.warning('Failed to load agent ${widget.agentSlug}, using defaults: $e');
       setState(() {
         _agent = {
           'name': widget.agentSlug,
@@ -55,15 +60,18 @@ class _AgentEditorPageState extends State<AgentEditorPage>
   }
 
   Future<void> _saveAgent() async {
+    _log.info('Saving agent: ${widget.agentSlug}');
     setState(() => _saving = true);
     try {
       await _api.updateAgent(widget.agentSlug, _agent);
+      _log.info('Agent saved successfully: ${widget.agentSlug}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Agente guardado'), backgroundColor: AgentStudioTheme.success),
         );
       }
     } catch (e) {
+      _log.warning('Save failed for ${widget.agentSlug}: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e'), backgroundColor: AgentStudioTheme.error),
@@ -75,10 +83,13 @@ class _AgentEditorPageState extends State<AgentEditorPage>
   }
 
   Future<void> _saveGates(List<Map<String, dynamic>> gates) async {
+    _log.fine('Saving ${gates.length} gates for ${widget.agentSlug}');
     try {
       await _api.updateGates(widget.agentSlug, gates);
-    } catch (_) {
+      _log.fine('Gates saved successfully');
+    } catch (e) {
       // Silently fail — offline-first approach
+      _log.warning('Gates save failed (offline-first): $e');
     }
   }
 

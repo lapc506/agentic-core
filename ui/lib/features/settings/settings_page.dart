@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:logging/logging.dart';
 import 'package:xterm/xterm.dart';
 import '../../theme/agent_studio_theme.dart';
 import '../../services/api_client.dart';
@@ -78,6 +79,7 @@ class _ConnectionsTab extends StatefulWidget {
 }
 
 class _ConnectionsTabState extends State<_ConnectionsTab> {
+  static final _log = Logger('ConnectionsTab');
   final _api = ApiClient();
   bool _loading = true;
 
@@ -98,8 +100,10 @@ class _ConnectionsTabState extends State<_ConnectionsTab> {
   }
 
   Future<void> _checkConnections() async {
+    _log.info('Checking service connections...');
     try {
       final health = await _api.health();
+      _log.fine('Health response received');
 
       setState(() {
         // Update service status from health response
@@ -128,7 +132,10 @@ class _ConnectionsTabState extends State<_ConnectionsTab> {
 
         _loading = false;
       });
-    } catch (_) {
+      final connected = _services.where((s) => s['connected'] == true).length;
+      _log.info('Connection check complete: $connected/${_services.length} services connected');
+    } catch (e) {
+      _log.warning('Connection check failed: $e');
       setState(() => _loading = false);
     }
   }
@@ -432,6 +439,7 @@ class _VariablesTab extends StatefulWidget {
 }
 
 class _VariablesTabState extends State<_VariablesTab> {
+  static final _log = Logger('VariablesTab');
   final _api = ApiClient();
   Map<String, String> _vars = {};
   bool _loading = true;
@@ -443,18 +451,21 @@ class _VariablesTabState extends State<_VariablesTab> {
   }
 
   Future<void> _loadConfig() async {
+    _log.info('Loading configuration...');
     try {
       final config = await _api.getConfig();
       final Map<String, String> parsed = {};
       for (final entry in config.entries) {
         parsed[entry.key] = entry.value?.toString() ?? '';
       }
+      _log.fine('Loaded ${parsed.length} config variables');
       setState(() {
         _vars = parsed;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
       // Fallback to defaults when API unavailable
+      _log.warning('Config load failed, using defaults: $e');
       setState(() {
         _vars = {
           'AGENTIC_MODE': 'standalone',
@@ -507,6 +518,7 @@ class _DebugTab extends StatefulWidget {
 }
 
 class _DebugTabState extends State<_DebugTab> {
+  static final _log = Logger('DebugTab');
   late Terminal _terminal;
   final _api = ApiClient();
   Timer? _pollTimer;
@@ -565,6 +577,7 @@ class _DebugTabState extends State<_DebugTab> {
   }
 
   Future<void> _pollHealth() async {
+    _log.fine('Polling health...');
     try {
       final health = await _api.health();
       final status = health['status'] ?? 'unknown';
@@ -579,6 +592,7 @@ class _DebugTabState extends State<_DebugTab> {
       }
       _terminal.write('\r\n');
     } catch (e) {
+      _log.warning('Health poll failed: $e');
       final ts = DateTime.now().toIso8601String().substring(11, 19);
       _terminal.write('[$ts] \x1B[31mERROR\x1B[0m  Health check failed: $e\r\n');
     }
@@ -702,6 +716,7 @@ class _DockerTab extends StatefulWidget {
 }
 
 class _DockerTabState extends State<_DockerTab> {
+  static final _log = Logger('DockerTab');
   final _api = ApiClient();
   List<Map<String, dynamic>> _containers = [];
   bool _loading = true;
@@ -714,10 +729,12 @@ class _DockerTabState extends State<_DockerTab> {
   }
 
   Future<void> _loadDockerStatus() async {
+    _log.info('Loading Docker status...');
     try {
       final resp = await _api.getDockerStatus();
       final containers = resp['containers'];
       if (containers is List) {
+        _log.fine('Loaded ${containers.length} Docker containers');
         setState(() {
           _containers = containers.cast<Map<String, dynamic>>();
           _apiAvailable = true;
@@ -725,7 +742,9 @@ class _DockerTabState extends State<_DockerTab> {
         });
         return;
       }
-    } catch (_) {}
+    } catch (e) {
+      _log.warning('Docker status unavailable: $e');
+    }
 
     // Fallback: API not available
     setState(() {

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:genui/genui.dart';
+import 'package:logging/logging.dart';
 
 import '../../services/api_client.dart';
 import '../../services/ws_client.dart';
@@ -19,6 +20,7 @@ class GenUiChatPage extends StatefulWidget {
 }
 
 class _GenUiChatPageState extends State<GenUiChatPage> {
+  static final _log = Logger('GenUiChatPage');
   late final SurfaceController _controller;
   final _textController = TextEditingController();
   final _surfaceIds = <String>[];
@@ -57,9 +59,11 @@ class _GenUiChatPageState extends State<GenUiChatPage> {
   // ---------------------------------------------------------------------------
 
   Future<void> _loadAgents() async {
+    _log.info('Loading agents...');
     try {
       var agents = await _apiClient.listAgents();
       if (agents.isEmpty) {
+        _log.info('No agents found, auto-creating demo agent');
         // Auto-create demo agent
         await _apiClient.createAgent({
           'name': 'Asistente Demo',
@@ -69,12 +73,14 @@ class _GenUiChatPageState extends State<GenUiChatPage> {
         });
         agents = await _apiClient.listAgents();
       }
+      _log.info('Loaded ${agents.length} agents');
       setState(() => _agents = agents);
       if (agents.isNotEmpty && _selectedAgent == null) {
         _selectAgent(agents.first['slug'] as String);
       }
-    } catch (_) {
+    } catch (e) {
       // Backend may not be available yet
+      _log.warning('Failed to load agents: $e');
     }
   }
 
@@ -83,6 +89,7 @@ class _GenUiChatPageState extends State<GenUiChatPage> {
   // ---------------------------------------------------------------------------
 
   void _selectAgent(String slug) {
+    _log.info('Selecting agent: $slug');
     // Tear down any previous conversation
     _eventSub?.cancel();
     _conversation?.dispose();
@@ -161,6 +168,7 @@ class _GenUiChatPageState extends State<GenUiChatPage> {
 
   void _onWsMessage(Map<String, dynamic> msg) {
     final type = msg['type'] as String?;
+    _log.fine('WS message: $type');
     switch (type) {
       case 'session_created':
         setState(() {
@@ -257,6 +265,7 @@ class _GenUiChatPageState extends State<GenUiChatPage> {
   void _sendMessage() {
     final text = _textController.text.trim();
     if (text.isEmpty || _selectedAgent == null) return;
+    _log.info('Sending message to $_selectedAgent (${text.length} chars)');
 
     // Record the user message locally
     setState(() {

@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' show min;
+import 'package:logging/logging.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class WsClient {
+  static final _log = Logger('WsClient');
   WsClient({String? wsUrl}) : _wsUrl = wsUrl ?? _defaultWsUrl();
 
   /// Resolve WebSocket URL. Web uses same-origin, desktop uses localhost.
@@ -27,18 +30,28 @@ class WsClient {
   bool get isConnected => _channel != null;
 
   void connect() {
+    _log.info('Connecting to $_wsUrl');
     _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
     _channel!.stream.listen(
       (data) {
-        final msg = jsonDecode(data as String) as Map<String, dynamic>;
+        final raw = data as String;
+        _log.fine('WS recv: ${raw.substring(0, min(100, raw.length))}...');
+        final msg = jsonDecode(raw) as Map<String, dynamic>;
         _messageController.add(msg);
       },
-      onError: (error) => _messageController.addError(error),
-      onDone: () => _channel = null,
+      onError: (error) {
+        _log.severe('WS error: $error');
+        _messageController.addError(error);
+      },
+      onDone: () {
+        _log.info('WS closed');
+        _channel = null;
+      },
     );
   }
 
   void send(Map<String, dynamic> message) {
+    _log.fine('WS send: ${message['type']}');
     _channel?.sink.add(jsonEncode(message));
   }
 
@@ -64,6 +77,7 @@ class WsClient {
   }
 
   void dispose() {
+    _log.info('Disposing WsClient');
     _channel?.sink.close();
     _messageController.close();
   }

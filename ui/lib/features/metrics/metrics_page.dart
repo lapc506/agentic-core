@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:graphic/graphic.dart';
+import 'package:logging/logging.dart';
 import '../../theme/agent_studio_theme.dart';
 import '../../services/api_client.dart';
 
@@ -38,6 +39,7 @@ class MetricsPage extends StatefulWidget {
 }
 
 class _MetricsPageState extends State<MetricsPage> {
+  static final _log = Logger('MetricsPage');
   final _api = ApiClient();
   bool _loading = true;
 
@@ -60,6 +62,7 @@ class _MetricsPageState extends State<MetricsPage> {
   }
 
   Future<void> _loadMetrics() async {
+    _log.info('Loading metrics...');
     try {
       final results = await Future.wait([
         _api.getMetrics('latency').catchError((_) => <String, dynamic>{}),
@@ -104,7 +107,9 @@ class _MetricsPageState extends State<MetricsPage> {
 
         _loading = false;
       });
-    } catch (_) {
+      _log.fine('Metrics loaded: sessions=$_activeSessions latency=$_latencyP99 gates=$_gatesPassRate tokens=$_tokensPerHour');
+    } catch (e) {
+      _log.warning('Failed to load metrics: $e');
       setState(() => _loading = false);
     }
   }

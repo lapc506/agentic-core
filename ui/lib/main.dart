@@ -1,12 +1,17 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:logging/logging.dart';
 import 'services/api_client.dart';
+import 'services/app_logger.dart';
 import 'theme/agent_studio_theme.dart';
 import 'routing/router.dart';
 import 'features/onboarding/onboarding_dialog.dart';
 
-void main() => runApp(const AgentStudioApp());
+void main() {
+  AppLogger.init(level: Level.FINE, logFile: '/tmp/agent-studio.log');
+  runApp(const AgentStudioApp());
+}
 
 class AgentStudioApp extends StatefulWidget {
   const AgentStudioApp({super.key});
@@ -18,6 +23,7 @@ class AgentStudioApp extends StatefulWidget {
 final themeNotifier = ValueNotifier<bool>(true); // true = dark
 
 class _AgentStudioAppState extends State<AgentStudioApp> {
+  static final _log = Logger('AgentStudioApp');
   bool _checkingSetup = true;
   bool _needsOnboarding = false;
 
@@ -28,18 +34,23 @@ class _AgentStudioAppState extends State<AgentStudioApp> {
   }
 
   Future<void> _checkSetup() async {
+    _log.info('Checking setup status...');
     try {
       final resp = await http.get(Uri.parse('${ApiClient.baseUrl}/api/studio/setup-status'));
+      _log.fine('Setup status: ${resp.statusCode}');
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final hasAgents = data['has_agents'] as bool? ?? false;
+        _log.info('Setup check complete: has_agents=$hasAgents');
         setState(() {
-          _needsOnboarding = !(data['has_agents'] as bool? ?? false);
+          _needsOnboarding = !hasAgents;
           _checkingSetup = false;
         });
         return;
       }
-    } catch (_) {
+    } catch (e) {
       // Backend not available — skip onboarding
+      _log.warning('Setup check failed, skipping onboarding: $e');
     }
     setState(() => _checkingSetup = false);
   }
