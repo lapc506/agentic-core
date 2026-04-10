@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
+import '../../../services/api_client.dart';
 import '../../../theme/agent_studio_theme.dart';
 
 class SidebarPanel extends StatelessWidget {
@@ -38,11 +39,14 @@ class _ChatPanelContentState extends State<ChatPanelContent> {
   Future<void> _loadSessions() async {
     _log.info('Loading sidebar sessions...');
     try {
-      // Sessions endpoint doesn't exist yet — gracefully degrade
-      // final sessions = await ApiClient().listSessions();
-      // setState(() => _sessions = sessions);
-      _log.fine('Session loading skipped (endpoint not ready)');
+      final api = ApiClient();
+      final sessions = await api.listSessions();
+      if (mounted) {
+        setState(() => _sessions = sessions);
+      }
+      _log.fine('Loaded ${sessions.length} sidebar sessions');
     } catch (e) {
+      // Silently fail — endpoint may not return data yet
       _log.warning('Failed to load sidebar sessions: $e');
     }
   }

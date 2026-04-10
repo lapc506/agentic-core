@@ -89,6 +89,11 @@ class _GenUiChatPageState extends State<GenUiChatPage> {
   // ---------------------------------------------------------------------------
 
   void _selectAgent(String slug) {
+    // Don't reconnect if already connected to this agent
+    if (_selectedAgent == slug && _sessionId != null) {
+      _log.fine('Already connected to $slug, skipping reconnect');
+      return;
+    }
     _log.info('Selecting agent: $slug');
     // Tear down any previous conversation
     _eventSub?.cancel();

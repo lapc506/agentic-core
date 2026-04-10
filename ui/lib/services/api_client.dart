@@ -126,6 +126,23 @@ class ApiClient {
     return jsonDecode(resp.body) as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> getStudioConfig() async {
+    _log.fine('GET /api/studio/config');
+    final resp = await http.get(Uri.parse('$_baseUrl/api/studio/config'));
+    _log.fine('getStudioConfig: ${resp.statusCode}');
+    return jsonDecode(resp.body) as Map<String, dynamic>;
+  }
+
+  Future<void> saveStudioConfig(Map<String, dynamic> config) async {
+    _log.fine('POST /api/studio/config');
+    final resp = await http.post(
+      Uri.parse('$_baseUrl/api/studio/config'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(config),
+    );
+    _log.fine('saveStudioConfig: ${resp.statusCode}');
+  }
+
   /// Generic POST for arbitrary endpoints (used by GenUI transport).
   Future<Map<String, dynamic>> rawPost(String path, Map<String, dynamic> body) async {
     _log.fine('POST $path');

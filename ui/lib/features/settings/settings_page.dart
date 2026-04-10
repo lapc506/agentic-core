@@ -267,12 +267,70 @@ class _ModelsTab extends StatefulWidget {
 }
 
 class _ModelsTabState extends State<_ModelsTab> {
-  final List<Map<String, String>> _providers = [
+  static final _log = Logger('ModelsTab');
+  final _api = ApiClient();
+
+  List<Map<String, String>> _providers = [
     {'name': 'Anthropic', 'type': 'anthropic', 'model': 'claude-sonnet-4-6', 'baseUrl': 'https://api.anthropic.com', 'status': 'active'},
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadProviders();
+  }
+
+  Future<void> _loadProviders() async {
+    _log.info('Loading providers from backend...');
+    try {
+      final config = await _api.getStudioConfig();
+      final providers = (config['providers'] as List?) ?? [];
+      if (providers.isNotEmpty) {
+        setState(() {
+          _providers = providers.map((p) => Map<String, String>.from(
+            (p as Map).map((k, v) => MapEntry(k.toString(), v.toString())),
+          )).toList();
+        });
+        _log.info('Loaded ${_providers.length} providers from backend');
+      } else {
+        _log.fine('No providers in backend, keeping defaults');
+      }
+    } catch (e) {
+      _log.warning('Failed to load providers: $e');
+    }
+  }
+
+  Future<void> _saveProviders() async {
+    _log.info('Saving ${_providers.length} providers to backend...');
+    try {
+      await _api.saveStudioConfig({
+        'onboarded': true,
+        'providers': _providers,
+      });
+      _log.info('Providers saved (${_providers.length} providers)');
+    } catch (e) {
+      _log.warning('Failed to save providers: $e');
+    }
+  }
+
   void _addProvider(Map<String, String> provider) {
     setState(() => _providers.add(provider));
+    _saveProviders();
+  }
+
+  void _updateProvider(int index, Map<String, String> provider) {
+    setState(() => _providers[index] = provider);
+    _saveProviders();
+  }
+
+  void _setDefault(int index) {
+    setState(() {
+      for (int i = 0; i < _providers.length; i++) {
+        _providers[i] = Map<String, String>.from(_providers[i])
+          ..['status'] = (i == index) ? 'active' : 'configured';
+      }
+    });
+    _saveProviders();
   }
 
   @override
@@ -312,7 +370,8 @@ class _ModelsTabState extends State<_ModelsTab> {
         const SizedBox(height: 24),
         const Text('CONFIGURADOS', style: TextStyle(color: AgentStudioTheme.primary, fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1)),
         const SizedBox(height: 8),
-        ..._providers.map((p) => _providerCard(p)),
+        for (int i = 0; i < _providers.length; i++)
+          _providerCard(_providers[i], i),
       ],
     );
   }
@@ -329,7 +388,7 @@ class _ModelsTabState extends State<_ModelsTab> {
     );
   }
 
-  Widget _providerCard(Map<String, String> p) {
+  Widget _providerCard(Map<String, String> p, int index) {
     final isActive = p['status'] == 'active';
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -354,13 +413,18 @@ class _ModelsTabState extends State<_ModelsTab> {
               child: Text(p['type']!, style: const TextStyle(color: AgentStudioTheme.textSecondary, fontSize: 10)),
             ),
             const Spacer(),
+            IconButton(
+              icon: const Icon(Icons.edit, size: 16, color: AgentStudioTheme.textSecondary),
+              tooltip: 'Editar provider',
+              onPressed: () => _showEditProviderDialog(context, index),
+            ),
             if (isActive) Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(color: const Color(0xFF1a2e1a), borderRadius: BorderRadius.circular(4)),
               child: const Text('Default', style: TextStyle(color: AgentStudioTheme.success, fontSize: 10)),
             ),
             if (!isActive) TextButton(
-              onPressed: () {},
+              onPressed: () => _setDefault(index),
               child: const Text('Set Default', style: TextStyle(color: AgentStudioTheme.primary, fontSize: 11)),
             ),
           ]),
@@ -379,16 +443,38 @@ class _ModelsTabState extends State<_ModelsTab> {
   }
 
   void _showAddProviderDialog(BuildContext context) {
-    final nameCtrl = TextEditingController();
-    final urlCtrl = TextEditingController();
-    final modelCtrl = TextEditingController();
-    final keyCtrl = TextEditingController();
+    _showProviderDialog(context, title: 'Agregar Inference Provider', onSave: (provider) {
+      _addProvider(provider);
+    });
+  }
+
+  void _showEditProviderDialog(BuildContext context, int index) {
+    final existing = _providers[index];
+    _showProviderDialog(
+      context,
+      title: 'Editar Inference Provider',
+      initial: existing,
+      onSave: (provider) {
+        _updateProvider(index, provider);
+      },
+    );
+  }
+
+  void _showProviderDialog(BuildContext context, {
+    required String title,
+    Map<String, String>? initial,
+    required void Function(Map<String, String>) onSave,
+  }) {
+    final nameCtrl = TextEditingController(text: initial?['name'] ?? '');
+    final urlCtrl = TextEditingController(text: initial?['baseUrl'] ?? '');
+    final modelCtrl = TextEditingController(text: initial?['model'] ?? '');
+    final keyCtrl = TextEditingController(text: initial?['apiKey'] ?? '');
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AgentStudioTheme.card,
-        title: const Text('Agregar Inference Provider', style: TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 16)),
+        title: Text(title, style: const TextStyle(color: AgentStudioTheme.textPrimary, fontSize: 16)),
         content: SizedBox(
           width: 400,
           child: Column(
@@ -416,12 +502,22 @@ class _ModelsTabState extends State<_ModelsTab> {
           FilledButton(
             onPressed: () {
               if (nameCtrl.text.isNotEmpty && urlCtrl.text.isNotEmpty) {
-                _addProvider({'name': nameCtrl.text, 'type': 'openai', 'model': modelCtrl.text, 'baseUrl': urlCtrl.text, 'status': 'configured'});
+                final provider = {
+                  'name': nameCtrl.text,
+                  'type': initial?['type'] ?? 'openai',
+                  'model': modelCtrl.text,
+                  'baseUrl': urlCtrl.text,
+                  'status': initial?['status'] ?? 'configured',
+                };
+                if (keyCtrl.text.isNotEmpty) {
+                  provider['apiKey'] = keyCtrl.text;
+                }
+                onSave(provider);
                 Navigator.pop(ctx);
               }
             },
             style: FilledButton.styleFrom(backgroundColor: AgentStudioTheme.primary),
-            child: const Text('Agregar'),
+            child: Text(initial != null ? 'Guardar' : 'Agregar'),
           ),
         ],
       ),
