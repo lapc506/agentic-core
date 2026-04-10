@@ -1,0 +1,62 @@
+site_name: Agent Studio
+site_description: "Visual agent configuration and orchestration for agentic-core"
+site_url: https://lapc506.github.io/agentic-core
+repo_url: https://github.com/lapc506/agentic-core
+repo_name: lapc506/agentic-core
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  language: es
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Cambiar a modo claro
+    - scheme: default
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Cambiar a modo oscuro
+  font:
+    text: Ubuntu
+    code: Ubuntu Mono
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - content.code.copy
+    - search.highlight
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Quick Start: getting-started.md
+      - Standalone Mode: standalone.md
+      - TUI: tui.md
+  - API Reference:
+      - REST API: api/rest.md
+      - WebSocket: api/websocket.md
+      - Ollama API: api/ollama.md
+      - A2A Protocol: api/a2a.md
+  - Guides:
+      - Providers: guides/providers.md
+      - Agent Personas: guides/personas.md
+      - SOUL.md: guides/soul-md.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - Deployment: architecture/deployment.md
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - tables
