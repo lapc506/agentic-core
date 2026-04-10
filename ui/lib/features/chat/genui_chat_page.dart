@@ -6,6 +6,7 @@ import 'package:genui/genui.dart';
 import '../../services/api_client.dart';
 import '../../services/ws_client.dart';
 import '../../theme/agent_studio_theme.dart';
+import 'widgets/debug_panel.dart';
 
 /// Chat page powered by Flutter GenUI — renders dynamic AI-generated widgets
 /// instead of plain text bubbles. Connects to agentic-core via the existing
@@ -36,6 +37,11 @@ class _GenUiChatPageState extends State<GenUiChatPage> {
   String? _sessionId;
   bool _isWaiting = false;
   String _statusText = 'Selecciona un agente';
+
+  // Debug panel state
+  bool _debugOpen = false;
+  final List<DebugEntry> _debugEntries = [];
+  DateTime? _streamStartTime;
 
   @override
   void initState() {
@@ -87,7 +93,9 @@ class _GenUiChatPageState extends State<GenUiChatPage> {
       _selectedAgent = slug;
       _surfaceIds.clear();
       _textMessages.clear();
+      _debugEntries.clear();
       _sessionId = null;
+      _streamStartTime = null;
       _statusText = 'Conectando a $slug...';
     });
 
@@ -160,15 +168,64 @@ class _GenUiChatPageState extends State<GenUiChatPage> {
           _statusText = 'Conectado a $_selectedAgent';
         });
       case 'stream_start':
-        // Agent started streaming — GenUI will receive chunks
-        break;
+        _streamStartTime = DateTime.now();
+        setState(() {
+          _debugEntries.add(DebugEntry(
+            type: 'think',
+            content: 'Processing...',
+          ));
+        });
       case 'stream_token':
         // Feed the raw token to the A2UI parser which extracts JSON blocks
         // for surfaces and passes plain text through as chat content.
         final token = msg['token'] as String? ?? '';
         _transport?.addChunk(token);
+
+        // Populate debug entries from structured metadata if present,
+        // otherwise fall back to content-based detection.
+        final debugType = msg['debug_type'] as String?;
+        if (debugType != null) {
+          setState(() {
+            _debugEntries.add(DebugEntry(
+              type: debugType,
+              content: msg['debug_content'] as String? ?? token,
+              timing: msg['debug_timing'] as String?,
+            ));
+          });
+        } else if (token.contains('tool_call:') || token.contains('Calling ')) {
+          setState(() {
+            _debugEntries.add(DebugEntry(
+              type: 'tool_call',
+              content: token.trim(),
+            ));
+          });
+        } else if (token.contains('tool_result:') || token.contains('Result:')) {
+          setState(() {
+            _debugEntries.add(DebugEntry(
+              type: 'tool_result',
+              content: token.trim(),
+            ));
+          });
+        } else if (token.contains('gate:') || token.contains('PASS') || token.contains('FAIL')) {
+          setState(() {
+            _debugEntries.add(DebugEntry(
+              type: 'gate',
+              content: token.trim(),
+            ));
+          });
+        }
       case 'stream_end':
-        setState(() => _isWaiting = false);
+        final elapsed = _streamStartTime != null
+            ? DateTime.now().difference(_streamStartTime!).inMilliseconds
+            : 0;
+        setState(() {
+          _isWaiting = false;
+          _debugEntries.add(DebugEntry(
+            type: 'response',
+            content: 'Complete',
+            timing: '${elapsed}ms',
+          ));
+        });
       case 'human_escalation':
         setState(() {
           _textMessages.add(_ChatEntry(
@@ -252,13 +309,42 @@ class _GenUiChatPageState extends State<GenUiChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final chatContent = Column(
       children: [
-        _buildHeader(),
         Expanded(
           child: _hasContent ? _buildConversation() : _buildEmptyState(),
         ),
         _buildInputBar(),
+      ],
+    );
+
+    return Column(
+      children: [
+        _buildHeader(),
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(child: chatContent),
+              if (_debugOpen)
+                Container(
+                  width: 320,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF0E1018),
+                    border: Border(
+                      left: BorderSide(
+                        color: AgentStudioTheme.primary,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  child: DebugPanel(
+                    entries: _debugEntries,
+                    sessionId: _sessionId,
+                  ),
+                ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -457,6 +543,28 @@ class _GenUiChatPageState extends State<GenUiChatPage> {
                     ? AgentStudioTheme.success
                     : AgentStudioTheme.error,
                 fontSize: 11,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: () => setState(() => _debugOpen = !_debugOpen),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AgentStudioTheme.primary,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('\u{1F50D} Debug',
+                      style: TextStyle(color: Colors.white, fontSize: 11)),
+                  const SizedBox(width: 4),
+                  Text(_debugOpen ? '\u25C2' : '\u25B8',
+                      style:
+                          const TextStyle(color: Colors.white, fontSize: 9)),
+                ],
               ),
             ),
           ),
