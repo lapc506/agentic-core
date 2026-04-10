@@ -86,7 +86,9 @@ class AgentStudioTheme {
         secondaryLabelStyle: const TextStyle(color: lightTextPrimary, fontSize: 12),
         backgroundColor: lightCard,
         selectedColor: primary.withValues(alpha: 0.15),
+        checkmarkColor: primary,
         side: const BorderSide(color: lightBorder),
+        iconTheme: const IconThemeData(color: lightTextPrimary),
       ),
     );
   }
@@ -132,7 +134,9 @@ class AgentStudioTheme {
         secondaryLabelStyle: TextStyle(color: textPrimary, fontSize: 12),
         backgroundColor: card,
         selectedColor: primary,
+        checkmarkColor: Colors.white,
         side: BorderSide(color: border),
+        iconTheme: IconThemeData(color: textPrimary),
       ),
     );
   }
