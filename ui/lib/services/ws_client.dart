@@ -5,17 +5,18 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 class WsClient {
   WsClient({String? wsUrl}) : _wsUrl = wsUrl ?? _defaultWsUrl();
 
-  /// Use same origin as the page (works in Docker and local dev)
+  /// Resolve WebSocket URL. Web uses same-origin, desktop uses localhost.
   static String _defaultWsUrl() {
-    // In browser: derive from window.location
-    // ignore: avoid_dynamic_calls
     try {
       final uri = Uri.base;
-      final scheme = uri.scheme == 'https' ? 'wss' : 'ws';
-      return '$scheme://${uri.host}:${uri.port}/ws';
-    } catch (_) {
-      return 'ws://localhost:8080/ws';
-    }
+      // Only use Uri.base if it's a real HTTP origin (web mode)
+      if ((uri.scheme == 'http' || uri.scheme == 'https') && uri.host.isNotEmpty) {
+        final scheme = uri.scheme == 'https' ? 'wss' : 'ws';
+        return '$scheme://${uri.host}:${uri.port}/ws';
+      }
+    } catch (_) {}
+    // Desktop / mobile fallback
+    return 'ws://localhost:8080/ws';
   }
 
   final String _wsUrl;
