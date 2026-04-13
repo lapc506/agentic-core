@@ -1,0 +1,40 @@
+# values-dev.yaml — Local Minikube development overrides
+#
+# Usage: helm install agentic-core ./deployment/helm/agentic-core \
+#          -f deployment/helm/agentic-core/values-dev.yaml \
+#          -n agentic-core
+
+replicaCount: 1
+
+image:
+  repository: localhost/agentic-core
+  tag: dev
+  pullPolicy: Never    # Use local Minikube image, no registry pull
+
+mode: standalone
+
+env:
+  AGENTIC_MODE: standalone
+  AGENTIC_REDIS_URL: redis://redis.agentic-core.svc.cluster.local:6379
+  AGENTIC_POSTGRES_DSN: postgresql://agentic:agentic@postgres.agentic-core.svc.cluster.local:5432/agentic
+  AGENTIC_FALKORDB_URL: redis://falkordb.agentic-core.svc.cluster.local:6380
+  AGENTIC_WS_HOST: "0.0.0.0"
+  AGENTIC_WS_PORT: "8765"
+  AGENTIC_GRPC_HOST: "0.0.0.0"
+  AGENTIC_GRPC_PORT: "50051"
+  AGENTIC_OBSERVABILITY__LOG_FORMAT: console
+  AGENTIC_OBSERVABILITY__LOG_LEVEL: DEBUG
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: false
+
+serviceMonitor:
+  enabled: false
