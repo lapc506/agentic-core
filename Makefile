@@ -287,6 +287,11 @@ build-web:
 build-docker: build-web
 	podman build -t agentic-core -f deployment/docker/Dockerfile .
 
+images-pull: ## Pull all third-party container images required by docker-compose (run after `podman system prune`)
+	podman pull docker.io/falkordb/falkordb:latest
+	podman pull docker.io/library/redis:7-alpine
+	podman pull docker.io/pgvector/pgvector:pg16
+
 up: build-docker
 	podman compose up -d
 	@echo "Agent Studio running at http://localhost:8765"
